@@ -8,13 +8,14 @@ db.serialize(() => {
     db.run("DROP TABLE IF EXISTS poster_templates");
     db.run("DROP TABLE IF EXISTS users");
 
-    // 1. Users Table (No changes needed, but 'id' should match foreign keys)
+    // 1. Users Table 
     db.run(`CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         phone TEXT,
+        grad_year INTEGER NOT NULL,
         role TEXT CHECK(role IN ('admin', 'user')) DEFAULT 'user',
         status TEXT DEFAULT 'active'
     )`);
@@ -26,7 +27,7 @@ db.serialize(() => {
         css_class TEXT NOT NULL
     )`);
 
-    // 3. Events Table (FIXED: Foreign Key names and Check Constraint)
+    // 3. Events Table 
     db.run(`CREATE TABLE events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
