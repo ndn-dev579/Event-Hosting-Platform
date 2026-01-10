@@ -139,13 +139,17 @@ app.get("/logout", (req, res) => {
 
 // Homepage: Show only 'published' events that haven't happened yet
 app.get("/", (req, res) => {
-  const query = `
-      SELECT events.*, poster_templates.css_class 
-      FROM events 
-      JOIN poster_templates ON events.template_id = poster_templates.template_id
-      WHERE events.event_status = 'published' 
-      AND events.event_date >= datetime('now')
-      ORDER BY events.event_date ASC`;
+  // Logic: Join with registrations to count taken seats per event
+  const query = `SELECT 
+                      e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
+                      t.css_class,
+                      (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as seats_taken
+                  FROM events e
+                  JOIN poster_templates t ON e.template_id = t.template_id
+                  WHERE e.event_status = 'published' 
+                  AND e.event_date >= datetime('now')
+                  ORDER BY e.event_date ASC
+                  LIMIT 6`;
 
   db.all(query, [], (err, events) => {
     if (err) return next(err);
@@ -153,13 +157,244 @@ app.get("/", (req, res) => {
   });
 });
 
+// Full Events Feed: Show ALL upcoming published events
+app.get("/events", (req, res) => {
+  const query = `
+      SELECT 
+          e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
+          t.css_class,
+          (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as seats_taken
+      FROM events e
+      JOIN poster_templates t ON e.template_id = t.template_id
+      WHERE e.event_status = 'published' 
+      AND e.event_date >= datetime('now')
+      ORDER BY e.event_date ASC`;
+
+  db.all(query, [], (err, events) => {
+      if (err) return next(err);
+      res.render("all_events", { events, user: req.session.user });
+  });
+});
+// 4.1 Event Details Page
+app.get("/events/view/:id", (req, res, next) => {
+  const eventId = req.params.id;
+
+  // Join with templates and counts seats
+  const query = `
+      SELECT 
+          e.*, 
+          t.css_class,
+          (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as seats_taken
+      FROM events e
+      JOIN poster_templates t ON e.template_id = t.template_id
+      WHERE e.id = ?`;
+
+  db.get(query, [eventId], (err, event) => {
+    if (err) return next(err);
+    if (!event) return res.status(404).send("Event not found.");
+
+    // Human-in-the-Loop Security:
+    // Only Admins or the Creator can see 'pending' or 'rejected' events.
+    const canView =
+      event.event_status === "published" ||
+      (req.session.user &&
+        (req.session.user.role === "admin" ||
+          req.session.user.id === event.user_id));
+
+    if (!canView) {
+      return res.status(403).send("This event is currently under review.");
+    }
+
+    res.render("event_details", { event, user: req.session.user });
+  });
+});
+
 // ==========================================
 // 5. ADMIN & PRIVATE ROUTES (Using Protectors)
 // ==========================================
 
+// Main Admin Menu
 app.get("/admin/dashboard", isAuth, isAdmin, (req, res) => {
-  // Logic for admin to see pending events
-  res.render("admin_dashboard", { user: req.session.user });
+  res.render("admin_menu", { user: req.session.user });
+});
+
+// 1. Pending Events Review Page (The Queue)
+app.get("/admin/events/pending", isAuth, isAdmin, (req, res) => {
+  const query = `SELECT e.id, e.title, e.event_date, e.venue, u.name as creator_name 
+                FROM events e
+                JOIN users u ON e.user_id = u.id 
+                WHERE e.event_status = 'pending_review'`;
+
+  db.all(query, [], (err, pendingEvents) => {
+    if (err) return next(err);
+    res.render("admin_pending_events", {
+      pendingEvents,
+      user: req.session.user,
+    });
+  });
+});
+
+// 2. Event History Page (Accepted, Rejected, Archived)
+app.get("/admin/events/history", isAuth, isAdmin, (req, res) => {
+  const query = `SELECT e.id, e.title, e.event_date, e.event_status, u.name as creator_name 
+                   FROM events e
+                   JOIN users u ON e.user_id = u.id 
+                   WHERE e.event_status != 'pending_review'
+                   ORDER BY e.event_date DESC`;
+
+  db.all(query, [], (err, eventHistory) => {
+    if (err) return next(err);
+    res.render("admin_event_history", { eventHistory, user: req.session.user });
+  });
+});
+
+// 3. User Management Page
+app.get("/admin/users", isAuth, isAdmin, (req, res) => {
+  db.all(
+    "SELECT id, name, email, role, grad_year, status FROM users",
+    [],
+    (err, allUsers) => {
+      if (err) return next(err);
+      res.render("admin_user_management", {
+        allUsers,
+        user: req.session.user,
+        currentYear: new Date().getFullYear(),
+      });
+    }
+  );
+});
+
+// Admin Logic: Approve, Reject, or Archive Event
+app.post("/admin/event-action", isAuth, isAdmin, (req, res) => {
+  const { event_id, action } = req.body; // action: 'published', 'rejected', or 'archived'
+  db.run(
+    "UPDATE events SET event_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+    [action, event_id],
+    (err) => {
+      if (err) return next(err);
+      // Redirect back to the page they came from
+      res.redirect("back");
+    }
+  );
+});
+
+// Admin Logic: Deactivate User
+app.post("/admin/user-status", isAuth, isAdmin, (req, res) => {
+  const { target_user_id, new_status } = req.body;
+  db.run(
+    "UPDATE users SET status = ? WHERE id = ?",
+    [new_status, target_user_id],
+    (err) => {
+      if (err) return next(err);
+      res.redirect("/admin/users");
+    }
+  );
+});
+
+// ==========================================
+// 5. USER EVENT ACTIONS (Creation & Registration)
+// ==========================================
+
+// View events hosted by the current user
+app.get("/my-events", isAuth, (req, res, next) => {
+  const query = `SELECT id, title, event_date, event_status FROM events WHERE user_id = ? ORDER BY created_at DESC`;
+  db.all(query, [req.session.user.id], (err, myEvents) => {
+      if (err) return next(err);
+      res.render("user_hosted_events", { myEvents, user: req.session.user });
+  });
+});
+
+// View events the current user is attending
+app.get("/my-tickets", isAuth, (req, res, next) => {
+  const query = `
+      SELECT e.title, e.event_date, e.venue, r.ticket_code, r.registered_at 
+      FROM registrations r
+      JOIN events e ON r.event_id = e.id
+      WHERE r.user_id = ?
+      ORDER BY e.event_date ASC`;
+  
+  db.all(query, [req.session.user.id], (err, myTickets) => {
+      if (err) return next(err);
+      res.render("user_tickets", { myTickets, user: req.session.user });
+  });
+});
+
+app.get("/events/create", isAuth, (req, res) => {
+  db.all("SELECT * FROM poster_templates", [], (err, templates) => {
+    res.render("create_event", { templates, user: req.session.user });
+  });
+});
+
+app.post("/events/create", isAuth, (req, res) => {
+  const {
+    title,
+    sub_title,
+    hosted_by,
+    venue,
+    event_date,
+    duration,
+    description,
+    total_seats,
+    template_id,
+  } = req.body;
+
+  const query = `INSERT INTO events (user_id, hosted_by, template_id, title, sub_title, duration, description, venue, event_date, total_seats) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+  db.run(
+    query,
+    [
+      req.session.user.id,
+      hosted_by,
+      template_id,
+      title,
+      sub_title,
+      duration,
+      description,
+      venue,
+      event_date,
+      total_seats,
+    ],
+    (err) => {
+      if (err) return next(err);
+      res.redirect("/?msg=event_submitted_for_review");
+    }
+  );
+});
+
+app.post("/events/register", isAuth, (req, res) => {
+  const { event_id } = req.body;
+  const user_id = req.session.user.id;
+  const ticket_code =
+    "EVT-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+  // STEP 1: Check seat availability first
+  const seatCheckQuery = `
+      SELECT 
+          total_seats, 
+          (SELECT COUNT(*) FROM registrations WHERE event_id = ?) as taken 
+      FROM events WHERE id = ?`;
+
+  db.get(seatCheckQuery, [event_id, event_id], (err, row) => {
+    if (err) return next(err);
+
+    if (row.taken >= row.total_seats) {
+      return res.send("Error: This event is already full!");
+    }
+
+    // STEP 2: Proceed with registration if seats are available
+    const query = `INSERT INTO registrations (user_id, event_id, ticket_code) VALUES (?, ?, ?)`;
+
+    db.run(query, [user_id, event_id, ticket_code], (err) => {
+      if (err) {
+        if (err.message.includes("UNIQUE constraint failed")) {
+          return res.send("Error: You are already registered for this event!");
+        }
+        return next(err);
+      }
+      res.redirect("/my-tickets");
+    });
+  });
 });
 
 // ==========================================
