@@ -21,7 +21,48 @@ app.use(
   })
 );
 
-// --- AUTHENTICATION ROUTES ---
+// ==========================================
+// 2. SECURITY MIDDLEWARE (The Protectors)
+// ==========================================
+
+// Helper: Check if user is logged in and not a passout student
+const isAuth = (req, res, next) => {
+  const currentYear = new Date().getFullYear();
+
+  // Check 1: Is there a session?
+  if (!req.session.user) {
+    return res.redirect("/login");
+  }
+
+  // Check 2: Has the student graduated? (Auto-lock for passouts)
+  if (
+    req.session.user.role === "user" &&
+    currentYear > req.session.user.grad_year
+  ) {
+    req.session.destroy();
+    return res.redirect("/login?error=access_expired");
+  }
+
+  // Check 3: Is the account manually deactivated by Admin?
+  if (req.session.user.status === "inactive") {
+    req.session.destroy();
+    return res.redirect("/login?error=account_deactivated");
+  }
+
+  next();
+};
+
+// Helper: Check if user has admin privileges
+const isAdmin = (req, res, next) => {
+  if (req.session.user && req.session.user.role === "admin") {
+    return next();
+  }
+  res.status(403).send("Access Denied: Administrative privileges required.");
+};
+
+// ==========================================
+//              AUTH ROUTES (Login, Signup, Logout)
+// ==========================================
 
 // --- PAGE ROUTES ---
 app.get("/login", (req, res) => res.render("login"));
@@ -30,7 +71,7 @@ app.get("/signup", (req, res) => res.render("signup"));
 // 1. Signup Route
 app.post("/auth/signup", async (req, res) => {
   const { name, email, password, phone, grad_year } = req.body;
-  const orgDomain = "@yourcollege.edu"; // Your rule
+  const orgDomain = process.env.ORG_DOMAIN; // Your rule
 
   if (!email.endsWith(orgDomain)) {
     return res.send("Access Denied: Use your college email.");
@@ -57,23 +98,29 @@ app.post("/auth/login", (req, res) => {
   db.get(`SELECT * FROM users WHERE email = ?`, [email], async (err, user) => {
     if (!user) return res.send("User not found.");
 
-    // Check A: Graduation Check (Passout Logic)
+    // logic: Check Graduation Year before checking password (Efficiency)
     if (user.role === "user" && currentYear > user.grad_year) {
       return res.send(
-        `Access Denied: Your access expired in ${user.grad_year}.`
+        `Access Denied: Your student portal access expired in ${user.grad_year}.`
       );
     }
 
-    // Check B: Admin Status Check
+    // logic: Check manual status
     if (user.status !== "active") {
-      return res.send("Your account has been deactivated by an admin.");
+      return res.send("Account Deactivated: Please contact administration.");
     }
 
-    // Check C: Password Check
     const match = await bcrypt.compare(password, user.password);
     if (match) {
-      req.session.user = { id: user.id, name: user.name, role: user.role };
-      res.redirect("/"); // Go to homepage
+      // CRITICAL: Storing grad_year in session for the isAuth protector
+      req.session.user = {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        grad_year: user.grad_year,
+        status: user.status,
+      };
+      res.redirect("/");
     } else {
       res.send("Invalid password.");
     }
@@ -86,12 +133,45 @@ app.get("/logout", (req, res) => {
   res.redirect("/login");
 });
 
-// Homepage (Only show upcoming published events)
+// ==========================================
+// 4. GENERAL CONTENT ROUTES
+// ==========================================
+
+// Homepage: Show only 'published' events that haven't happened yet
 app.get("/", (req, res) => {
-  const query = `SELECT * FROM events WHERE event_status = 'published' AND event_date >= datetime('now')`;
+  const query = `
+      SELECT events.*, poster_templates.css_class 
+      FROM events 
+      JOIN poster_templates ON events.template_id = poster_templates.template_id
+      WHERE events.event_status = 'published' 
+      AND events.event_date >= datetime('now')
+      ORDER BY events.event_date ASC`;
+
   db.all(query, [], (err, events) => {
+    if (err) return next(err);
     res.render("home", { events, user: req.session.user });
   });
 });
 
-app.listen(3000, () => console.log("Server started on http://localhost:3000"));
+// ==========================================
+// 5. ADMIN & PRIVATE ROUTES (Using Protectors)
+// ==========================================
+
+app.get("/admin/dashboard", isAuth, isAdmin, (req, res) => {
+  // Logic for admin to see pending events
+  res.render("admin_dashboard", { user: req.session.user });
+});
+
+// ==========================================
+// 6. GLOBAL ERROR HANDLER (Centralized)
+// ==========================================
+app.use((err, req, res, next) => {
+  console.error("SERVER ERROR:", err.stack);
+  res
+    .status(500)
+    .send("Something went wrong on our end. We are investigating!");
+});
+
+app.listen(PORT, () => {
+  console.log(`Evently is live at http://localhost:${PORT}`);
+});
