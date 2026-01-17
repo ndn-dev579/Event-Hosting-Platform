@@ -7,6 +7,7 @@ const path = require("path");
 
 const app = express();
 const db = new sqlite3.Database("./database/evently.db");
+const PORT = process.env.PORT || 3000; // Define PORT with a default value
 
 // Middleware
 app.set("view engine", "ejs");
@@ -91,7 +92,7 @@ app.post("/auth/signup", async (req, res) => {
 });
 
 // 2. Login Route (With Passout Student Protection)
-app.post("/auth/login", (req, res) => {
+app.post("/auth/login", (req, res,next) => {
   const { email, password } = req.body;
   const currentYear = new Date().getFullYear();
 
@@ -138,7 +139,7 @@ app.get("/logout", (req, res) => {
 // ==========================================
 
 // Homepage: Show only 'published' events that haven't happened yet
-app.get("/", (req, res) => {
+app.get("/", (req, res,next) => {
   // Logic: Join with registrations to count taken seats per event
   const query = `SELECT 
                       e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
@@ -158,7 +159,7 @@ app.get("/", (req, res) => {
 });
 
 // Full Events Feed: Show ALL upcoming published events
-app.get("/events", (req, res) => {
+app.get("/events", (req, res,next) => {
   const query = `
       SELECT 
           e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
@@ -219,7 +220,7 @@ app.get("/admin/dashboard", isAuth, isAdmin, (req, res) => {
 });
 
 // 1. Pending Events Review Page (The Queue)
-app.get("/admin/events/pending", isAuth, isAdmin, (req, res) => {
+app.get("/admin/events/pending", isAuth, isAdmin, (req, res,next) => {
   const query = `SELECT e.id, e.title, e.event_date, e.venue, u.name as creator_name 
                 FROM events e
                 JOIN users u ON e.user_id = u.id 
@@ -235,7 +236,7 @@ app.get("/admin/events/pending", isAuth, isAdmin, (req, res) => {
 });
 
 // 2. Event History Page (Accepted, Rejected, Archived)
-app.get("/admin/events/history", isAuth, isAdmin, (req, res) => {
+app.get("/admin/events/history", isAuth, isAdmin, (req, res,next) => {
   const query = `SELECT e.id, e.title, e.event_date, e.event_status, u.name as creator_name 
                    FROM events e
                    JOIN users u ON e.user_id = u.id 
@@ -249,7 +250,7 @@ app.get("/admin/events/history", isAuth, isAdmin, (req, res) => {
 });
 
 // 3. User Management Page
-app.get("/admin/users", isAuth, isAdmin, (req, res) => {
+app.get("/admin/users", isAuth, isAdmin, (req, res,next) => {
   db.all(
     "SELECT id, name, email, role, grad_year, status FROM users",
     [],
@@ -265,7 +266,7 @@ app.get("/admin/users", isAuth, isAdmin, (req, res) => {
 });
 
 // Admin Logic: Approve, Reject, or Archive Event
-app.post("/admin/event-action", isAuth, isAdmin, (req, res) => {
+app.post("/admin/event-action", isAuth, isAdmin, (req, res,next) => {
   const { event_id, action } = req.body; // action: 'published', 'rejected', or 'archived'
   db.run(
     "UPDATE events SET event_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -279,7 +280,7 @@ app.post("/admin/event-action", isAuth, isAdmin, (req, res) => {
 });
 
 // Admin Logic: Deactivate User
-app.post("/admin/user-status", isAuth, isAdmin, (req, res) => {
+app.post("/admin/user-status", isAuth, isAdmin, (req, res,next) => {
   const { target_user_id, new_status } = req.body;
   db.run(
     "UPDATE users SET status = ? WHERE id = ?",
@@ -325,7 +326,7 @@ app.get("/events/create", isAuth, (req, res) => {
   });
 });
 
-app.post("/events/create", isAuth, (req, res) => {
+app.post("/events/create", isAuth, (req, res, next) => {
   const {
     title,
     sub_title,
@@ -335,34 +336,63 @@ app.post("/events/create", isAuth, (req, res) => {
     duration,
     description,
     total_seats,
-    template_id,
+    // New fields from the form
+    poster_template_id, // "modern", "bold", etc.
+    poster_color        // "#ff0000"
   } = req.body;
 
-  const query = `INSERT INTO events (user_id, hosted_by, template_id, title, sub_title, duration, description, venue, event_date, total_seats) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-
-  db.run(
-    query,
-    [
-      req.session.user.id,
-      hosted_by,
-      template_id,
-      title,
-      sub_title,
-      duration,
-      description,
-      venue,
-      event_date,
-      total_seats,
-    ],
-    (err) => {
+  // 1. First, find the Integer ID for the selected text key
+  // We need this because your table requires 'template_id' (Integer)
+  db.get(
+    "SELECT template_id FROM poster_templates WHERE template_key = ?", 
+    [poster_template_id || 'modern'], // Default to 'modern' if empty
+    (err, row) => {
       if (err) return next(err);
-      res.redirect("/?msg=event_submitted_for_review");
+
+      // If for some reason the template isn't found, default to ID 1
+      const integerId = row ? row.template_id : 1; 
+
+      // 2. Now Insert everything
+      const query = `
+        INSERT INTO events (
+          user_id, hosted_by, 
+          template_id,         -- The Integer ID (Required by your table)
+          poster_template_id,  -- The Text Key (Used by our JS Builder)
+          poster_color,        -- The Hex Color
+          title, sub_title, duration, description, venue, event_date, total_seats
+        ) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      db.run(
+        query,
+        [
+          req.session.user.id,
+          hosted_by,
+          integerId,               // <--- Saving the Integer ID
+          poster_template_id,      // <--- Saving the String Key ('hackathon')
+          poster_color,            // <--- Saving the Color
+          title,
+          sub_title,
+          duration,
+          description,
+          venue,
+          event_date,
+          total_seats,
+        ],
+        (err) => {
+          if (err) {
+             console.log(err); // Log error to terminal so we can see it
+             return next(err);
+          }
+          res.redirect("/?msg=event_submitted_for_review");
+        }
+      );
     }
   );
 });
 
-app.post("/events/register", isAuth, (req, res) => {
+app.post("/events/register", isAuth, (req, res,next) => {
   const { event_id } = req.body;
   const user_id = req.session.user.id;
   const ticket_code =
@@ -410,3 +440,8 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Evently is live at http://localhost:${PORT}`);
 });
+
+
+//#003049 dark blue
+//#669bbc light blue
+//#fdf0d5 cream

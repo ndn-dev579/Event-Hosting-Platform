@@ -1,14 +1,20 @@
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./database/evently.db');
+const path = require('path');
+
+// Point to your specific database file
+const dbPath = path.resolve(__dirname, 'database', 'evently.db');
+const db = new sqlite3.Database(dbPath);
+
+console.log(`Connected to database at: ${dbPath}`);
 
 db.serialize(() => {
-    // Drop tables if they exist
-    db.run("DROP TABLE IF EXISTS registrations");
-    db.run("DROP TABLE IF EXISTS events");
-    db.run("DROP TABLE IF EXISTS poster_templates");
-    db.run("DROP TABLE IF EXISTS users");
+    // 1. Drop existing tables so we can recreate them correctly
+    // db.run("DROP TABLE IF EXISTS registrations");
+    // db.run("DROP TABLE IF EXISTS events");
+    // db.run("DROP TABLE IF EXISTS poster_templates");
+    // db.run("DROP TABLE IF EXISTS users");
 
-    // 1. Users Table 
+    // 2. Create Users Table
     db.run(`CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -20,19 +26,25 @@ db.serialize(() => {
         status TEXT DEFAULT 'active'
     )`);
 
-    // 2. Templates Table
+    // 3. Create Templates Table (CRITICAL FIX: Using 'template_id')
     db.run(`CREATE TABLE poster_templates (
-        template_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER PRIMARY KEY AUTOINCREMENT, -- Named exactly 'template_id'
         template_name TEXT NOT NULL,
-        css_class TEXT NOT NULL
+        template_key TEXT UNIQUE NOT NULL, 
+        css_class TEXT
     )`);
 
-    // 3. Events Table 
+    // 4. Create Events Table
     db.run(`CREATE TABLE events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
         hosted_by TEXT NOT NULL,
-        template_id INTEGER NOT NULL,
+        
+        template_id INTEGER NOT NULL, -- Links to poster_templates.template_id
+        
+        poster_template_id TEXT DEFAULT 'modern', 
+        poster_color TEXT DEFAULT '#ef4444',
+
         title TEXT NOT NULL,
         sub_title TEXT,
         duration INTEGER NOT NULL,
@@ -45,11 +57,12 @@ db.serialize(() => {
         event_status TEXT CHECK(event_status IN ('pending_review', 'published', 'rejected', 'archived')) DEFAULT 'pending_review',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (template_id) REFERENCES poster_templates(template_id)
     )`);
 
-    // 4. Registrations Table
+    // 5. Create Registrations Table
     db.run(`CREATE TABLE registrations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -64,15 +77,15 @@ db.serialize(() => {
         FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
     )`);
 
-    // Seed initial templates
-    db.run(`INSERT INTO poster_templates (template_name, css_class) VALUES 
-        ('Modern Blue', 'theme-blue'),
-        ('Neon Dark', 'theme-neon'),
-        ('Academic Formal', 'theme-formal')`);
+    // 6. Seed Data (Re-inserting the templates)
+    const insertTemplate = db.prepare("INSERT INTO poster_templates (template_name, template_key, css_class) VALUES (?, ?, ?)");
+    insertTemplate.run('Brutal Grid',      'modern',    'bg-white');
+    insertTemplate.run('Propaganda Block', 'bold',      'bg-stone-200');
+    insertTemplate.run('Terminal Error',   'hackathon', 'bg-black');
+    insertTemplate.finalize();
 
-        db.close((err) => {
-            if (err) console.error(err.message);
-            else console.log("Database initialized and templates seeded!");
-        });
-    
+    db.close((err) => {
+        if (err) console.error(err.message);
+        else console.log("✅ Database fixed! Column is now named 'template_id'.");
     });
+});
