@@ -120,6 +120,8 @@ const templates = {
             </div>
         </div>
     `
+
+    
 };
 
 window.posterTemplates = templates;
