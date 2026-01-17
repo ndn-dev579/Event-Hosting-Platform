@@ -308,7 +308,7 @@ app.get("/my-events", isAuth, (req, res, next) => {
 // View events the current user is attending
 app.get("/my-tickets", isAuth, (req, res, next) => {
   const query = `
-      SELECT e.title, e.event_date, e.venue, r.ticket_code, r.registered_at 
+      SELECT e.title, e.event_date, e.venue, r.ticket_code, r.created_at 
       FROM registrations r
       JOIN events e ON r.event_id = e.id
       WHERE r.user_id = ?

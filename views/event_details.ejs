@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= event.title %> | Evently</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col font-sans">
+
+    <nav class="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/" class="text-2xl font-black tracking-tighter hover:text-blue-600 transition">EVENTLY.</a>
+            
+            <div class="space-x-6 text-sm font-bold text-gray-600">
+                <a href="/" class="hover:text-black">Home</a>
+                <a href="/events" class="hover:text-black">All Events</a>
+                <% if (user) { %>
+                    <a href="/my-tickets" class="hover:text-black">My Tickets</a>
+                    <a href="/logout" class="text-red-500 hover:text-red-700">Logout</a>
+                <% } else { %>
+                    <a href="/login" class="text-blue-600 hover:text-blue-800">Login</a>
+                <% } %>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full p-6 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
+        
+        <div class="lg:col-span-5 flex flex-col items-center">
+            <div class="sticky top-24">
+                <div id="poster-render-target" 
+                     class="w-[400px] h-[565px] bg-gray-200 shadow-2xl border-[4px] border-black rounded-sm overflow-hidden mx-auto">
+                     <div class="h-full flex items-center justify-center text-gray-400 font-mono text-xs uppercase animate-pulse">
+                        Loading Design...
+                     </div>
+                </div>
+
+                <% if (event.event_status === 'pending_review') { %>
+                    <div class="mt-4 bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded text-center font-bold text-sm">
+                        ⚠️ This event is waiting for Admin Approval.
+                    </div>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-8">
+            
+            <div>
+                <span class="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-widest mb-3">
+                    Hosted By <%= event.hosted_by %>
+                </span>
+                <h1 class="text-5xl md:text-6xl font-black text-gray-900 uppercase leading-[0.9] tracking-tight mb-4 font-['Oswald']">
+                    <%= event.title %>
+                </h1>
+                <p class="text-xl md:text-2xl font-bold text-gray-500" style="color: <%= event.poster_color || '#6b7280' %>">
+                    <%= event.sub_title %>
+                </p>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex items-start gap-4">
+                    <div class="bg-gray-100 p-3 rounded border border-gray-200">
+                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Date & Time</p>
+                        <p class="text-lg font-bold text-gray-900"><%= event.event_date.split('T')[0] %></p>
+                        <p class="text-sm text-gray-600"><%= event.duration %> Hours Duration</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4">
+                    <div class="bg-gray-100 p-3 rounded border border-gray-200">
+                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Venue</p>
+                        <p class="text-lg font-bold text-gray-900"><%= event.venue %></p>
+                        <p class="text-sm text-gray-600">On Campus</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="prose prose-lg text-gray-700 leading-relaxed">
+                <h3 class="font-bold text-black uppercase text-sm tracking-widest mb-2">About Event</h3>
+                <p><%= event.description %></p>
+            </div>
+
+            <div class="bg-white border-[3px] border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-8">
+                
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Seats Remaining</p>
+                        <% let remaining = event.total_seats - event.seats_taken; %>
+                        <p class="text-3xl font-black text-black">
+                            <%= remaining %> <span class="text-lg text-gray-400 font-medium">/ <%= event.total_seats %></span>
+                        </p>
+                    </div>
+                    <% if (remaining < 5 && remaining > 0) { %>
+                        <span class="bg-red-100 text-red-600 px-3 py-1 text-xs font-bold uppercase animate-pulse border border-red-200">
+                            Almost Full!
+                        </span>
+                    <% } %>
+                </div>
+
+                <% if (!user) { %>
+                    <a href="/login" class="block w-full bg-gray-900 text-white text-center font-bold py-4 uppercase tracking-widest hover:bg-black transition">
+                        Login to Register
+                    </a>
+                <% } else if (remaining <= 0) { %>
+                     <button disabled class="w-full bg-gray-100 text-gray-400 font-bold py-4 uppercase tracking-widest cursor-not-allowed border-2 border-gray-200">
+                        Event Sold Out
+                    </button>
+                <% } else { %>
+                    <form action="/events/register" method="POST">
+                        <input type="hidden" name="event_id" value="<%= event.id %>">
+                        <button type="submit" class="w-full bg-black text-white font-bold py-4 text-lg uppercase tracking-widest hover:bg-gray-800 transition shadow-lg transform active:scale-[0.99]">
+                            Register Now (Free)
+                        </button>
+                    </form>
+                <% } %>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="/js/posterTemplates.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // 1. Grab the server-side data (Passed from EJS to Client JS)
+            const eventData = {
+                title: "<%= event.title %>",
+                sub_title: "<%= event.sub_title %>",
+                hosted_by: "<%= event.hosted_by %>",
+                venue: "<%= event.venue %>",
+                date: "<%= event.event_date.split('T')[0] %>",
+                color: "<%= event.poster_color || '#ef4444' %>",
+                image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30" // Placeholder until image upload is added
+            };
+
+            const templateKey = "<%= event.poster_template_id || 'modern' %>";
+            const container = document.getElementById('poster-render-target');
+
+            // 2. Use the shared library to draw the HTML
+            if (window.posterTemplates && window.posterTemplates[templateKey]) {
+                container.innerHTML = window.posterTemplates[templateKey](eventData);
+            } else {
+                // Fallback for old events or errors
+                container.innerHTML = window.posterTemplates['modern'](eventData);
+            }
+        });
+    </script>
+
+</body>
+</html>

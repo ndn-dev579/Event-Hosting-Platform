@@ -1,52 +1,47 @@
 const sqlite3 = require('sqlite3').verbose();
+const bcrypt = require('bcrypt'); // We need this to hash the password
 const path = require('path');
 
-// !!! IMPORTANT: Check this path !!!
-// Ensure this points to where your actual .db file is located.
-// If your db is in a 'database' folder at the root, this is correct.
-const dbPath = path.resolve(__dirname, 'database', 'evently.db'); 
+// Connect to the database
+const dbPath = path.resolve(__dirname, 'database', 'evently.db');
+const db = new sqlite3.Database(dbPath);
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error("Error opening database:", err.message);
-        return;
-    }
-    console.log("Connected to SQLite database at:", dbPath);
-});
+const createAdmin = async () => {
+    console.log("🔒 Generating Admin Credentials...");
 
-db.serialize(() => {
-    console.log("--- Starting Database Update ---");
+    // 1. Create a secure hash for the password "admin123"
+    const hashedPassword = await bcrypt.hash('admin123', 10);
 
-    // 1. Add 'poster_color' Column
-    db.run("ALTER TABLE events ADD COLUMN poster_color TEXT DEFAULT '#ef4444'", (err) => {
+    // 2. Insert the Admin User
+    const query = `
+        INSERT INTO users (name, email, password, phone, grad_year, role, status) 
+        VALUES (?, ?, ?, ?, ?, 'admin', 'active')
+    `;
+
+    // Admin Details
+    const adminUser = [
+        'Super Admin',          // Name
+        'admin@evently.com',    // Email
+        hashedPassword,         // Hashed Password
+        '0000000000',           // Phone
+        2025                    // Grad Year
+    ];
+
+    db.run(query, adminUser, function(err) {
         if (err) {
-            if (err.message.includes("duplicate column")) {
-                console.log("ℹ️  Column 'poster_color' already exists. Skipping.");
+            if (err.message.includes('UNIQUE constraint failed')) {
+                console.log("⚠️  Error: An admin with this email already exists.");
             } else {
-                console.error("❌ Error adding 'poster_color':", err.message);
+                console.error("❌ Error creating admin:", err.message);
             }
         } else {
-            console.log("✅ Column 'poster_color' added successfully.");
+            console.log("✅ SUCCESS! Admin Account Created.");
+            console.log("-------------------------------------");
+            console.log("📧 Email:    admin@evently.com");
+            console.log("🔑 Password: admin123");
+            console.log("-------------------------------------");
         }
     });
+};
 
-    // 2. Add 'poster_template_id' Column
-    db.run("ALTER TABLE events ADD COLUMN poster_template_id TEXT DEFAULT 'modern'", (err) => {
-        if (err) {
-            if (err.message.includes("duplicate column")) {
-                console.log("ℹ️  Column 'poster_template_id' already exists. Skipping.");
-            } else {
-                console.error("❌ Error adding 'poster_template_id':", err.message);
-            }
-        } else {
-            console.log("✅ Column 'poster_template_id' added successfully.");
-        }
-    });
-});
-
-db.close((err) => {
-    if (err) {
-        console.error(err.message);
-    }
-    console.log("--- Update Complete. Connection Closed ---");
-});
+createAdmin();
