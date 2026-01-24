@@ -45,13 +45,15 @@
                         </div>
 
                         <div class="bg-gray-50 p-6 md:w-64 flex flex-col items-center justify-center text-center">
-                            <div class="w-24 h-24 bg-black mb-3 flex items-center justify-center">
-                                <div class="w-20 h-20 border-4 border-white grid grid-cols-4 gap-1 p-1">
-                                    <div class="bg-white col-span-2 row-span-2"></div>
-                                    <div class="bg-white"></div>
-                                    <div class="bg-white col-span-1 row-span-3"></div>
-                                </div>
+    
+                            <div class="w-28 h-28 bg-white p-2 shadow-sm mb-3 border border-gray-200">
+                                <% if (ticket.qr_code_url) { %>
+                                    <img src="<%= ticket.qr_code_url %>" alt="QR Code" class="w-full h-full object-contain">
+                                <% } else { %>
+                                    <div class="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-400">Error</div>
+                                <% } %>
                             </div>
+                        
                             <p class="font-mono text-xs font-bold text-gray-500">TICKET ID</p>
                             <p class="font-mono text-lg font-bold tracking-widest text-black"><%= ticket.ticket_code %></p>
                         </div>

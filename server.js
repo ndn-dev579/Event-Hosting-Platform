@@ -4,13 +4,8 @@ const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
 const session = require("express-session");
 const path = require("path");
-const Razorpay = require('razorpay');
+const QRCode = require('qrcode');
 
-// Initialize Razorpay
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-});
 
 const app = express();
 const db = new sqlite3.Database("./database/evently.db");
@@ -19,6 +14,7 @@ const PORT = process.env.PORT || 3000; // Define PORT with a default value
 // Middleware
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true })); // To read form data
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(
   session({
@@ -319,18 +315,32 @@ app.get("/my-events", isAuth, (req, res, next) => {
   });
 });
 
-// View events the current user is attending
+// View events the current user is attending (WITH QR CODES)
 app.get("/my-tickets", isAuth, (req, res, next) => {
   const query = `
-      SELECT e.title, e.event_date, e.venue, r.ticket_code, r.created_at 
+      SELECT e.title, e.event_date, e.venue, r.ticket_code, r.created_at, e.poster_color
       FROM registrations r
       JOIN events e ON r.event_id = e.id
       WHERE r.user_id = ?
       ORDER BY e.event_date ASC`;
 
-  db.all(query, [req.session.user.id], (err, myTickets) => {
-    if (err) return next(err);
-    res.render("user_tickets", { myTickets, user: req.session.user });
+  db.all(query, [req.session.user.id], async (err, rows) => {
+      if (err) return next(err);
+
+      // 1. Generate QR Code for each ticket asynchronously
+      // We use Promise.all to wait for all QR codes to generate
+      const myTickets = await Promise.all(rows.map(async (ticket) => {
+          try {
+              // Generates a base64 image URL
+              const qrCodeUrl = await QRCode.toDataURL(ticket.ticket_code);
+              return { ...ticket, qr_code_url: qrCodeUrl }; 
+          } catch (error) {
+              console.error("QR Generation Error:", error);
+              return { ...ticket, qr_code_url: null };
+          }
+      }));
+
+      res.render("user_tickets", { myTickets, user: req.session.user });
   });
 });
 
@@ -451,13 +461,13 @@ app.post("/events/register", isAuth, (req, res, next) => {
 });
 
 
-// 1. Create Order (With Seat & Duplicate Checks)
-app.post("/events/create-order", isAuth, (req, res, next) => {
+// MOCK PAYMENT ROUTE
+app.post("/events/mock-pay", isAuth, (req, res, next) => {
   const { event_id } = req.body;
   const user_id = req.session.user.id;
-  
-  // We combine all checks into one efficient query
-  const query = `
+
+  // 1. Perform all the checks (Availability, Duplicates, etc.)
+  const checkQuery = `
       SELECT 
           e.id, e.price, e.is_paid, e.total_seats,
           (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as taken_seats,
@@ -465,71 +475,29 @@ app.post("/events/create-order", isAuth, (req, res, next) => {
       FROM events e 
       WHERE e.id = ?`;
 
-  db.get(query, [user_id, event_id], async (err, event) => {
+  db.get(checkQuery, [user_id, event_id], (err, event) => {
       if(err) return next(err);
-      if(!event) return res.json({ status: 'error', message: 'Event not found' });
+      
+      // --- VALIDATION BLOCKS ---
+      if (!event) return res.json({ success: false, message: 'Event not found' });
+      if (event.taken_seats >= event.total_seats) return res.json({ success: false, message: 'Housefull!' });
+      if (event.is_registered > 0) return res.json({ success: false, message: 'Already registered.' });
+      if (!event.is_paid) return res.json({ success: false, message: 'This event is free.' });
 
-      // LOGIC CHECK 1: Is the event full?
-      if (event.taken_seats >= event.total_seats) {
-          return res.json({ status: 'error', message: 'Housefull! No seats available.' });
-      }
-
-      // LOGIC CHECK 2: Is user already registered?
-      if (event.is_registered > 0) {
-          return res.json({ status: 'error', message: 'You have already registered for this event.' });
-      }
-
-      // LOGIC CHECK 3: Is it actually paid?
-      if(!event.is_paid || event.price <= 0) {
-          return res.json({ status: 'free' }); 
-      }
-
-      // If all checks pass, create the Razorpay Order
-      const options = {
-          amount: event.price * 100, // Amount in paise
-          currency: "INR",
-          receipt: "order_rcptid_" + Date.now()
-      };
-
-      try {
-          const order = await razorpay.orders.create(options);
-          res.json({ 
-              status: 'order_created', 
-              order_id: order.id, 
-              amount: options.amount, 
-              key_id: process.env.RAZORPAY_KEY_ID 
-          });
-      } catch (error) {
-          console.log(error);
-          res.status(500).json({ status: 'error', message: "Razorpay Error" });
-      }
-  });
-});
-
-// 2. Verify Payment & Finalize Registration
-app.post("/events/verify-payment", isAuth, (req, res, next) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, event_id } = req.body;
-  const crypto = require("crypto");
-
-  // Verify Signature (Security Check)
-  const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
-  hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
-  const generated_signature = hmac.digest('hex');
-
-  if (generated_signature === razorpay_signature) {
-      // PAYMENT SUCCESS! Now register the user.
-      const user_id = req.session.user.id;
+      // --- SUCCESS SIMULATION ---
+      // Instead of verifying a real signature, we just generate a fake Transaction ID
+      const fakeTxnId = "MOCK_TXN_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
       const ticket_code = "EVT-" + Math.random().toString(36).substr(2, 9).toUpperCase();
 
-      const query = `INSERT INTO registrations (user_id, event_id, ticket_code, payment_status, transaction_id, payment_date) VALUES (?, ?, ?, 'completed', ?, datetime('now'))`;
+      const insertQuery = `INSERT INTO registrations (user_id, event_id, ticket_code, payment_status, transaction_id, payment_date) VALUES (?, ?, ?, 'completed', ?, datetime('now'))`;
 
-      db.run(query, [user_id, event_id, ticket_code, razorpay_payment_id], (err) => {
-          if (err) return res.json({ status: 'failed', message: 'Database error after payment' });
-          res.json({ status: 'success' });
+      db.run(insertQuery, [user_id, event_id, ticket_code, fakeTxnId], (err) => {
+          if (err) return res.json({ success: false, message: 'Database Error' });
+          
+          // Send back success signal
+          res.json({ success: true, ticket_code: ticket_code });
       });
-  } else {
-      res.json({ status: 'failed', message: 'Invalid Signature' });
-  }
+  });
 });
 // ==========================================
 // 6. GLOBAL ERROR HANDLER (Centralized)
