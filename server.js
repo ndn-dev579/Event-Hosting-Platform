@@ -273,8 +273,15 @@ app.post("/admin/event-action", isAuth, isAdmin, (req, res, next) => {
     [action, event_id],
     (err) => {
       if (err) return next(err);
-      // Redirect back to the page they came from
-      res.redirect("back");
+
+      // FIX: Explicitly redirect based on the action taken
+      if (action === 'archived') {
+          // If we just archived an event, go to history
+          res.redirect("/admin/events/history");
+      } else {
+          // If we accepted/rejected, go back to the pending queue
+          res.redirect("/admin/events/pending");
+      }
     }
   );
 });
@@ -287,7 +294,7 @@ app.post("/admin/user-status", isAuth, isAdmin, (req, res, next) => {
     [new_status, target_user_id],
     (err) => {
       if (err) return next(err);
-      res.redirect("/admin/users");
+        res.redirect("/admin/users"); //CHANGE HERE no /admin/users
     }
   );
 });

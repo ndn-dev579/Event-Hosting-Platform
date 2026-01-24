@@ -243,9 +243,25 @@
                                 <div
                                     class="h-32 bg-slate-100 border-b-2 border-slate-900 relative p-4 flex items-start justify-between overflow-hidden">
                                     <!-- Background Pattern based on template -->
-                                    <div class="absolute inset-0 opacity-10 <%= event.css_class || 'bg-blue-500' %>"
-                                        style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, #000 10px, #000 11px);">
+
+
+
+                                    <!-- SOLID COLOR BACKGROUND -->
+                                    <div class="absolute inset-0 opacity-10 <%= event.css_class || 'bg-blue-500' %>">
                                     </div>
+
+                                    <!-- STRIPE OVERLAY -->
+                                    <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(
+                                                45deg,
+                                                transparent,
+                                                transparent 10px,
+                                                #000 10px,
+                                                #000 11px
+                                            );">
+                                    </div>
+
+
+
 
                                     <!-- Date Badge -->
                                     <div
@@ -286,7 +302,8 @@
 
                                     <div class="space-y-2 mb-6">
                                         <div class="flex items-center text-sm font-semibold text-slate-700">
-                                            <div class="w-6 text-center mr-2"><i class="fa-regular fa-clock"></i></div>
+                                            <div class="w-6 text-center mr-2"><i class="fa-regular fa-clock"></i>
+                                            </div>
                                             <%= time %>
                                         </div>
                                         <div class="flex items-center text-sm font-semibold text-slate-700">
