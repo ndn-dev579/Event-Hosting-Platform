@@ -4,8 +4,7 @@ const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcrypt");
 const session = require("express-session");
 const path = require("path");
-const QRCode = require('qrcode');
-
+const QRCode = require("qrcode");
 
 const app = express();
 const db = new sqlite3.Database("./database/evently.db");
@@ -164,7 +163,7 @@ app.get("/", (req, res, next) => {
 // Full Events Feed: Show ALL upcoming published events (With Search)
 app.get("/events", (req, res, next) => {
   const searchTerm = req.query.q || ""; // Get the search term from the URL
-  
+
   const query = `
       SELECT 
           e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
@@ -178,13 +177,13 @@ app.get("/events", (req, res, next) => {
       ORDER BY e.event_date ASC`;
 
   // We use the % wildcard so it finds the text anywhere in the string
-  const params = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%` ];
+  const params = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`];
 
   db.all(query, params, (err, events) => {
     if (err) return next(err);
-    
+
     // Check if the request is looking for JSON (Instant Search)
-    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+    if (req.xhr || req.headers.accept.indexOf("json") > -1) {
       return res.json({ events });
     }
 
@@ -292,12 +291,12 @@ app.post("/admin/event-action", isAuth, isAdmin, (req, res, next) => {
       if (err) return next(err);
 
       // FIX: Explicitly redirect based on the action taken
-      if (action === 'archived') {
-          // If we just archived an event, go to history
-          res.redirect("/admin/events/history");
+      if (action === "archived") {
+        // If we just archived an event, go to history
+        res.redirect("/admin/events/history");
       } else {
-          // If we accepted/rejected, go back to the pending queue
-          res.redirect("/admin/events/pending");
+        // If we accepted/rejected, go back to the pending queue
+        res.redirect("/admin/events/pending");
       }
     }
   );
@@ -311,7 +310,7 @@ app.post("/admin/user-status", isAuth, isAdmin, (req, res, next) => {
     [new_status, target_user_id],
     (err) => {
       if (err) return next(err);
-        res.redirect("/admin/users"); //CHANGE HERE no /admin/users
+      res.redirect("/admin/users"); //CHANGE HERE no /admin/users
     }
   );
 });
@@ -332,8 +331,8 @@ app.get("/my-events", isAuth, (req, res, next) => {
       ORDER BY e.created_at DESC`;
 
   db.all(query, [req.session.user.id], (err, myEvents) => {
-      if (err) return next(err);
-      res.render("user_hosted_events", { myEvents, user: req.session.user });
+    if (err) return next(err);
+    res.render("user_hosted_events", { myEvents, user: req.session.user });
   });
 });
 
@@ -347,22 +346,24 @@ app.get("/my-tickets", isAuth, (req, res, next) => {
       ORDER BY e.event_date ASC`;
 
   db.all(query, [req.session.user.id], async (err, rows) => {
-      if (err) return next(err);
+    if (err) return next(err);
 
-      // 1. Generate QR Code for each ticket asynchronously
-      // We use Promise.all to wait for all QR codes to generate
-      const myTickets = await Promise.all(rows.map(async (ticket) => {
-          try {
-              // Generates a base64 image URL
-              const qrCodeUrl = await QRCode.toDataURL(ticket.ticket_code);
-              return { ...ticket, qr_code_url: qrCodeUrl }; 
-          } catch (error) {
-              console.error("QR Generation Error:", error);
-              return { ...ticket, qr_code_url: null };
-          }
-      }));
+    // 1. Generate QR Code for each ticket asynchronously
+    // We use Promise.all to wait for all QR codes to generate
+    const myTickets = await Promise.all(
+      rows.map(async (ticket) => {
+        try {
+          // Generates a base64 image URL
+          const qrCodeUrl = await QRCode.toDataURL(ticket.ticket_code);
+          return { ...ticket, qr_code_url: qrCodeUrl };
+        } catch (error) {
+          console.error("QR Generation Error:", error);
+          return { ...ticket, qr_code_url: null };
+        }
+      })
+    );
 
-      res.render("user_tickets", { myTickets, user: req.session.user });
+    res.render("user_tickets", { myTickets, user: req.session.user });
   });
 });
 
@@ -428,7 +429,8 @@ app.post("/events/create", isAuth, (req, res, next) => {
           venue,
           event_date,
           total_seats,
-          isPaidInt, finalPrice,
+          isPaidInt,
+          finalPrice,
         ],
         (err) => {
           if (err) {
@@ -445,7 +447,8 @@ app.post("/events/create", isAuth, (req, res, next) => {
 app.post("/events/register", isAuth, (req, res, next) => {
   const { event_id } = req.body;
   const user_id = req.session.user.id;
-  const ticket_code = "EVT-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+  const ticket_code =
+    "EVT-" + Math.random().toString(36).substr(2, 9).toUpperCase();
 
   // FIX: Added 'is_paid' to the SELECT list below
   const seatCheckQuery = `
@@ -465,7 +468,9 @@ app.post("/events/register", isAuth, (req, res, next) => {
 
     // 2. Payment Check (Now this works because we selected 'is_paid')
     if (row.is_paid == 1) {
-      return res.send("Error: Payment required. Please use the payment button.");
+      return res.send(
+        "Error: Payment required. Please use the payment button."
+      );
     }
 
     // 3. Register
@@ -482,6 +487,108 @@ app.post("/events/register", isAuth, (req, res, next) => {
   });
 });
 
+// DELETE EVENT ROUTE
+app.delete("/api/events/delete/:id", isAuth, (req, res) => {
+  const eventId = req.params.id;
+  const userId = req.session.user.id; // Logged in user ID
+
+  // Security: Only delete if the event ID matches AND the user_id matches
+  const query = `DELETE FROM events WHERE id = ? AND user_id = ?`;
+
+  db.run(query, [eventId, userId], function (err) {
+    if (err) {
+      return res.json({ success: false, message: "Database error" });
+    }
+
+    if (this.changes === 0) {
+      // This happens if the ID doesn't exist OR the user doesn't own it
+      return res.json({
+        success: false,
+        message: "Unauthorized or event not found",
+      });
+    }
+
+    res.json({ success: true, message: "Event deleted successfully" });
+  });
+});
+
+app.get("/events/edit/:id", isAuth, (req, res, next) => {
+  const eventId = req.params.id;
+  const userId = req.session.user.id;
+
+  // Security: Only allow the owner to edit
+  db.get(
+    "SELECT * FROM events WHERE id = ? AND user_id = ?",
+    [eventId, userId],
+    (err, event) => {
+      if (err) return next(err);
+      if (!event)
+        return res.status(403).send("Unauthorized or event not found.");
+
+      // Fetch templates too so the user can change the poster style
+      db.all("SELECT * FROM poster_templates", [], (err, templates) => {
+        res.render("edit_event", { event, templates, user: req.session.user });
+      });
+    }
+  );
+});
+
+app.post("/events/edit/:id", isAuth, (req, res, next) => {
+  const eventId = req.params.id;
+  const userId = req.session.user.id;
+  const {
+    title,
+    sub_title,
+    venue,
+    event_date,
+    duration,
+    description,
+    total_seats,
+    is_paid,
+    price,
+  } = req.body;
+
+  const isPaidInt = is_paid === "on" ? 1 : 0;
+  const finalPrice = isPaidInt === 1 ? parseFloat(price) : 0.0;
+
+  const query = `
+      UPDATE events SET 
+          title = ?, sub_title = ?, venue = ?, event_date = ?, 
+          duration = ?, description = ?, total_seats = ?, 
+          is_paid = ?, price = ?, event_status = 'pending_review',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND user_id = ?`;
+
+  db.run(
+    query,
+    [
+      title,
+      sub_title,
+      venue,
+      event_date,
+      duration,
+      description,
+      total_seats,
+      isPaidInt,
+      finalPrice,
+      eventId,
+      userId,
+    ],
+    function (err) {
+      if (err) {
+        console.error("Update Error:", err.message);
+        return next(err);
+      }
+
+      if (this.changes === 0) {
+        return res.status(403).send("Unauthorized: You do not own this event.");
+      }
+
+      // Redirect back to dashboard with a success message
+      res.redirect("/my-events?msg=update_success");
+    }
+  );
+});
 
 // MOCK PAYMENT ROUTE
 app.post("/events/mock-pay", isAuth, (req, res, next) => {
@@ -498,27 +605,32 @@ app.post("/events/mock-pay", isAuth, (req, res, next) => {
       WHERE e.id = ?`;
 
   db.get(checkQuery, [user_id, event_id], (err, event) => {
-      if(err) return next(err);
-      
-      // --- VALIDATION BLOCKS ---
-      if (!event) return res.json({ success: false, message: 'Event not found' });
-      if (event.taken_seats >= event.total_seats) return res.json({ success: false, message: 'Housefull!' });
-      if (event.is_registered > 0) return res.json({ success: false, message: 'Already registered.' });
-      if (!event.is_paid) return res.json({ success: false, message: 'This event is free.' });
+    if (err) return next(err);
 
-      // --- SUCCESS SIMULATION ---
-      // Instead of verifying a real signature, we just generate a fake Transaction ID
-      const fakeTxnId = "MOCK_TXN_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
-      const ticket_code = "EVT-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+    // --- VALIDATION BLOCKS ---
+    if (!event) return res.json({ success: false, message: "Event not found" });
+    if (event.taken_seats >= event.total_seats)
+      return res.json({ success: false, message: "Housefull!" });
+    if (event.is_registered > 0)
+      return res.json({ success: false, message: "Already registered." });
+    if (!event.is_paid)
+      return res.json({ success: false, message: "This event is free." });
 
-      const insertQuery = `INSERT INTO registrations (user_id, event_id, ticket_code, payment_status, transaction_id, payment_date) VALUES (?, ?, ?, 'completed', ?, datetime('now'))`;
+    // --- SUCCESS SIMULATION ---
+    // Instead of verifying a real signature, we just generate a fake Transaction ID
+    const fakeTxnId =
+      "MOCK_TXN_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    const ticket_code =
+      "EVT-" + Math.random().toString(36).substr(2, 9).toUpperCase();
 
-      db.run(insertQuery, [user_id, event_id, ticket_code, fakeTxnId], (err) => {
-          if (err) return res.json({ success: false, message: 'Database Error' });
-          
-          // Send back success signal
-          res.json({ success: true, ticket_code: ticket_code });
-      });
+    const insertQuery = `INSERT INTO registrations (user_id, event_id, ticket_code, payment_status, transaction_id, payment_date) VALUES (?, ?, ?, 'completed', ?, datetime('now'))`;
+
+    db.run(insertQuery, [user_id, event_id, ticket_code, fakeTxnId], (err) => {
+      if (err) return res.json({ success: false, message: "Database Error" });
+
+      // Send back success signal
+      res.json({ success: true, ticket_code: ticket_code });
+    });
   });
 });
 // ==========================================

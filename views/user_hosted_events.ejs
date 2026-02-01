@@ -40,8 +40,7 @@
                             <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sales</th>
                             <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Revenue</th>
                             <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Link</th>
-                        </tr>
+                            <th class="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>                        </tr>
                     </thead>
                     <tbody>
                         <% myEvents.forEach(event => { %>
@@ -89,9 +88,15 @@
                                         <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold uppercase">Rejected</span>
                                     <% } %>
                                 </td>
-                
-                                <td class="px-5 py-4 text-sm text-right">
-                                    <a href="/events/view/<%= event.id %>" class="text-blue-600 hover:underline font-bold text-xs uppercase">View &rarr;</a>
+                                <td class="px-5 py-4 text-sm text-right space-x-3">
+                                    <a href="/events/view/<%= event.id %>" class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase">View</a>
+                                    
+                                    <a href="/events/edit/<%= event.id %>" class="text-gray-600 hover:text-black font-bold text-xs uppercase">Edit</a>
+                                
+                                    <button onclick="confirmDelete(<%= event.id %>, '<%= event.title %>')" 
+                                            class="text-red-500 hover:text-red-700 font-bold text-xs uppercase">
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                         <% }); %>
@@ -100,6 +105,27 @@
             </div>
         <% } %>
     </div>
+
+
+    <script>
+        function confirmDelete(eventId, eventTitle) {
+            if (confirm(`Are you sure you want to delete "${eventTitle}"? This cannot be undone.`)) {
+                fetch(`/api/events/delete/${eventId}`, {
+                    method: 'DELETE',
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Refresh the page to show the event is gone
+                        window.location.reload();
+                    } else {
+                        alert("Error: " + data.message);
+                    }
+                })
+                .catch(err => console.error("Delete failed:", err));
+            }
+        }
+        </script>
 
 </body>
 </html>
