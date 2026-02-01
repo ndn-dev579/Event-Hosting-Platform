@@ -306,12 +306,20 @@ app.post("/admin/user-status", isAuth, isAdmin, (req, res, next) => {
 // 5. USER EVENT ACTIONS (Creation & Registration)
 // ==========================================
 
-// View events hosted by the current user
+// View events hosted by the current user (WITH REVENUE STATS)
 app.get("/my-events", isAuth, (req, res, next) => {
-  const query = `SELECT id, title, event_date, event_status FROM events WHERE user_id = ? ORDER BY created_at DESC`;
+  const query = `
+      SELECT 
+          e.id, e.title, e.event_date, e.event_status, 
+          e.is_paid, e.price, e.total_seats,
+          (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as sold_count
+      FROM events e 
+      WHERE e.user_id = ? 
+      ORDER BY e.created_at DESC`;
+
   db.all(query, [req.session.user.id], (err, myEvents) => {
-    if (err) return next(err);
-    res.render("user_hosted_events", { myEvents, user: req.session.user });
+      if (err) return next(err);
+      res.render("user_hosted_events", { myEvents, user: req.session.user });
   });
 });
 
