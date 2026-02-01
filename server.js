@@ -161,8 +161,10 @@ app.get("/", (req, res, next) => {
   });
 });
 
-// Full Events Feed: Show ALL upcoming published events
+// Full Events Feed: Show ALL upcoming published events (With Search)
 app.get("/events", (req, res, next) => {
+  const searchTerm = req.query.q || ""; // Get the search term from the URL
+  
   const query = `
       SELECT 
           e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
@@ -172,13 +174,25 @@ app.get("/events", (req, res, next) => {
       JOIN poster_templates t ON e.template_id = t.template_id
       WHERE e.event_status = 'published' 
       AND e.event_date >= datetime('now')
+      AND (e.title LIKE ? OR e.venue LIKE ? OR e.hosted_by LIKE ?)
       ORDER BY e.event_date ASC`;
 
-  db.all(query, [], (err, events) => {
+  // We use the % wildcard so it finds the text anywhere in the string
+  const params = [`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%` ];
+
+  db.all(query, params, (err, events) => {
     if (err) return next(err);
-    res.render("all_events", { events, user: req.session.user });
+    
+    // Check if the request is looking for JSON (Instant Search)
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+      return res.json({ events });
+    }
+
+    // Otherwise, render the page normally for the first load
+    res.render("all_events", { events, user: req.session.user, searchTerm });
   });
 });
+
 // 4.1 Event Details Page
 app.get("/events/view/:id", (req, res, next) => {
   const eventId = req.params.id;
