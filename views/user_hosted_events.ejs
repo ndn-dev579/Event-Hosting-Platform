@@ -40,7 +40,7 @@
         </div>
     </nav>
 
-    <div class="max-w-4xl mx-auto p-6 md:p-12">
+    <div class="max-w-5xl mx-auto p-6 md:p-12">
         <% if (typeof query !== 'undefined' && query.msg === 'update_success') { %>
             <div class="bg-black text-white p-4 mb-6 font-bold uppercase text-xs tracking-widest border-l-8 border-yellow-400">
                 Event updated and sent for admin review!
@@ -49,87 +49,87 @@
 
         <div class="flex justify-between items-end mb-8">
             <h1 class="text-4xl font-black uppercase">My Events</h1>
-            <a href="/events/create" class="bg-black text-white px-4 py-2 font-bold text-sm hover:bg-gray-800 transition">
+            <a href="/events/create" class="bg-black text-white px-4 py-2 font-bold text-sm hover:bg-gray-800 transition shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
                 + Create New Event
             </a>
         </div>
 
         <% if (myEvents.length === 0) { %>
-            <div class="text-center py-12 text-gray-400">
-                <p class="font-bold">You haven't hosted any events yet.</p>
+            <div class="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                <p class="font-bold uppercase tracking-widest">You haven't hosted any events yet.</p>
+                <a href="/events/create" class="text-blue-500 underline text-xs font-bold">Start now &rarr;</a>
             </div>
         <% } else { %>
-            <div class="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
+            <div class="bg-white shadow-xl border-2 border-black overflow-hidden">
                 <table class="min-w-full leading-normal">
-                    <thead class="bg-gray-50 border-b border-gray-200">
+                    <thead class="bg-gray-50 border-b-2 border-black">
                         <tr>
-                            <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Event</th>
-                            <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                            <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sales</th>
-                            <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Revenue</th>
-                            <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                            <th class="px-5 py-3 text-left text-xs font-black text-black uppercase tracking-wider">Event</th>
+                            <th class="px-5 py-3 text-left text-xs font-black text-black uppercase tracking-wider">Date</th>
+                            <th class="px-5 py-3 text-left text-xs font-black text-black uppercase tracking-wider">Sales</th>
+                            <th class="px-5 py-3 text-left text-xs font-black text-black uppercase tracking-wider">Status</th>
+                            <th class="px-5 py-3 text-right text-xs font-black text-black uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% myEvents.forEach(event => { %>
                             <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
-                                <td class="px-5 py-4 text-sm font-bold text-gray-900">
-                                    <%= event.title %>
+                                <td class="px-5 py-4">
+                                    <div class="text-sm font-bold text-gray-900 capitalize"><%= event.title %></div>
                                     <% if(event.is_paid) { %>
-                                        <span class="ml-2 bg-black text-white text-[10px] px-1 py-0.5 rounded uppercase">Paid</span>
+                                        <span class="bg-green-100 text-green-700 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">₹<%= event.price %></span>
+                                    <% } else { %>
+                                        <span class="bg-gray-100 text-gray-500 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">Free</span>
                                     <% } %>
                                 </td>
                                 
-                                <td class="px-5 py-4 text-sm text-gray-600">
-                                    <%= event.event_date.split('T')[0] %>
+                                <td class="px-5 py-4 text-xs font-bold text-gray-600">
+                                    <%= event.event_date ? event.event_date.split('T')[0] : 'N/A' %>
                                 </td>
                 
-                                <td class="px-5 py-4 text-sm">
-                                    <div class="flex items-center">
+                                <td class="px-5 py-4">
+                                    <div class="flex items-center text-xs">
                                         <span class="font-black text-black"><%= event.sold_count %></span>
                                         <span class="text-gray-400 mx-1">/</span>
                                         <span class="text-gray-500"><%= event.total_seats %></span>
                                     </div>
-                                    <div class="w-16 h-1 bg-gray-200 mt-1 rounded-full overflow-hidden">
+                                    <div class="w-16 h-1.5 bg-gray-100 mt-1 rounded-full overflow-hidden border border-gray-200">
                                         <% const percent = Math.min((event.sold_count / event.total_seats) * 100, 100); %>
                                         <div class="h-full bg-black" style="width: <%= percent %>%"></div>
                                     </div>
                                 </td>
                 
-                                <td class="px-5 py-4 text-sm font-mono">
-                                    <% if (event.is_paid) { %>
-                                        <% const revenue = event.sold_count * event.price; %>
-                                        <span class="text-green-600 font-bold">₹<%= revenue.toLocaleString('en-IN') %></span>
-                                    <% } else { %>
-                                        <span class="text-gray-400 font-bold">Free</span>
-                                    <% } %>
-                                </td>
-                
-                                <td class="px-5 py-4 text-sm">
-                                    <% if (event.event_status === 'pending_review') { %>
-                                        <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-bold uppercase">Pending</span>
-                                    <% } else if (event.event_status === 'published') { %>
-                                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold uppercase">Published</span>
+                                <td class="px-5 py-4">
+                                    <% if (event.event_status === 'published') { %>
+                                        <span class="bg-green-500 text-white px-2 py-0.5 text-[10px] font-black uppercase">Published</span>
                                     <% } else if (event.event_status === 'rejected') { %>
-                                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold uppercase">Rejected</span>
+                                        <span class="bg-red-600 text-white px-2 py-0.5 text-[10px] font-black uppercase">Rejected</span>
+                                    <% } else { %>
+                                        <span class="bg-yellow-400 text-black px-2 py-0.5 text-[10px] font-black uppercase">Pending Review</span>
+                                    <% } %>
+                                
+                                    <% if (event.admin_note) { %>
+                                        <div class="mt-2 bg-blue-50 border-l-2 border-blue-500 p-2 text-[10px] text-blue-700 font-bold leading-tight max-w-[200px]">
+                                            <span class="underline block mb-1 uppercase text-[8px]">Admin Note:</span>
+                                            "<%= event.admin_note %>"
+                                        </div>
                                     <% } %>
                                 </td>
-
+                                
                                 <td class="px-5 py-4 text-sm text-right space-x-3">
-                                    <a href="/events/view/<%= event.id %>" class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase">View</a>
+                                    <a href="/events/view/<%= event.id %>" class="text-blue-600 hover:underline font-bold text-[10px] uppercase">View</a>
                                     
                                     <% if (event.sold_count > 0 && user.role !== 'admin') { %>
-                                        <span class="tooltip inline-block text-gray-300 font-bold text-xs uppercase cursor-not-allowed relative">
+                                        <span class="tooltip inline-block text-gray-300 font-bold text-[10px] uppercase cursor-not-allowed relative">
                                             🔒 Locked
-                                            <span class="tooltiptext text-[9px]">Registrations active. Contact Admin to edit.</span>
+                                            <span class="tooltiptext text-[9px] font-medium">Tickets sold. Only Admin can edit now.</span>
                                         </span>
                                     <% } else { %>
-                                        <a href="/events/edit/<%= event.id %>" class="text-gray-600 hover:text-black font-bold text-xs uppercase">Edit</a>
+                                        <a href="/events/edit/<%= event.id %>" class="text-gray-900 hover:text-blue-600 font-black text-[10px] uppercase">Edit</a>
                                     <% } %>
                                 
                                     <button onclick="confirmDelete(<%= event.id %>, '<%= event.title %>')" 
-                                            class="text-red-500 hover:text-red-700 font-bold text-xs uppercase">
+                                            class="text-red-500 hover:text-red-700 font-bold text-[10px] uppercase">
                                         Delete
                                     </button>
                                 </td>

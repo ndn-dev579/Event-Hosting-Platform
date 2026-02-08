@@ -283,23 +283,23 @@ app.get("/admin/users", isAuth, isAdmin, (req, res, next) => {
 
 // Admin Logic: Approve, Reject, or Archive Event
 app.post("/admin/event-action", isAuth, isAdmin, (req, res, next) => {
-  const { event_id, action } = req.body; // action: 'published', 'rejected', or 'archived'
-  db.run(
-    "UPDATE events SET event_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-    [action, event_id],
-    (err) => {
-      if (err) return next(err);
+  const { event_id, action, admin_note } = req.body; 
 
-      // FIX: Explicitly redirect based on the action taken
-      if (action === "archived") {
-        // If we just archived an event, go to history
-        res.redirect("/admin/events/history");
-      } else {
-        // If we accepted/rejected, go back to the pending queue
-        res.redirect("/admin/events/pending");
-      }
-    }
-  );
+  // SECURITY GATE: Prevent rejection without a reason
+  if (action === "rejected" && (!admin_note || admin_note.trim() === "")) {
+      return res.status(400).send("Rejection failed: You must provide a reason for the host.");
+  }
+
+  const query = `UPDATE events SET 
+                 event_status = ?, 
+                 admin_note = ?, 
+                 updated_at = CURRENT_TIMESTAMP 
+                 WHERE id = ?`;
+
+  db.run(query, [action, admin_note || null, event_id], (err) => {
+      if (err) return next(err);
+      res.redirect(action === "archived" ? "/admin/events/history" : "/admin/events/pending");
+  });
 });
 
 // Admin Logic: Deactivate User
@@ -324,7 +324,7 @@ app.get("/my-events", isAuth, (req, res, next) => {
   const query = `
       SELECT 
           e.id, e.title, e.event_date, e.event_status, 
-          e.is_paid, e.price, e.total_seats,
+          e.is_paid, e.price, e.total_seats,e.admin_note,
           (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as sold_count
       FROM events e 
       WHERE e.user_id = ? 
@@ -332,7 +332,10 @@ app.get("/my-events", isAuth, (req, res, next) => {
 
   db.all(query, [req.session.user.id], (err, myEvents) => {
     if (err) return next(err);
-    res.render("user_hosted_events", { myEvents, user: req.session.user });
+    res.render("user_hosted_events", { 
+      myEvents, 
+      user: req.session.user,
+      query: req.query });
   });
 });
 

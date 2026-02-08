@@ -31,6 +31,15 @@
             </p>
         </header>
 
+        <% if (event.event_status === 'rejected' && event.admin_note) { %>
+            <div class="bg-red-600 text-white p-6 mb-8 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <h3 class="font-black uppercase text-xs mb-2 tracking-widest flex items-center">
+                    <span class="mr-2 text-lg">⚠️</span> Correction Required from Admin
+                </h3>
+                <p class="font-bold text-lg leading-tight italic">"<%= event.admin_note %>"</p>
+            </div>
+        <% } %>
+
         <form action="/events/edit/<%= event.id %>" method="POST" class="space-y-8">
             
             <% if (user.role === 'admin') { %>
@@ -81,8 +90,8 @@
                     <div class="flex flex-col">
                         <label class="text-xs font-bold uppercase mb-1">Event Date & Time</label>
                         <input type="datetime-local" name="event_date" 
-                               value="<%= event.event_date.substring(0, 16) %>" required
-                               class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
+       value="<%= event.event_date ? event.event_date.replace(' ', 'T').substring(0, 16) : '' %>" 
+       required class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
                     </div>
                 </div>
 
