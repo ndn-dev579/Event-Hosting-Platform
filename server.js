@@ -336,34 +336,33 @@ app.get("/my-events", isAuth, (req, res, next) => {
   });
 });
 
-// View events the current user is attending (WITH QR CODES)
+// View events the current user is attending (WITH CANCEL LOGIC & ANNOUNCEMENTS)
 app.get("/my-tickets", isAuth, (req, res, next) => {
+  // UPDATED QUERY: Added r.payment_status and e.public_announcement
   const query = `
-      SELECT e.title, e.event_date, e.venue, r.ticket_code, r.created_at, e.poster_color
+      SELECT 
+          e.title, e.event_date, e.venue, e.public_announcement, 
+          r.ticket_code, r.created_at, r.payment_status, e.poster_color
       FROM registrations r
       JOIN events e ON r.event_id = e.id
       WHERE r.user_id = ?
       ORDER BY e.event_date ASC`;
 
   db.all(query, [req.session.user.id], async (err, rows) => {
-    if (err) return next(err);
+      if (err) return next(err);
 
-    // 1. Generate QR Code for each ticket asynchronously
-    // We use Promise.all to wait for all QR codes to generate
-    const myTickets = await Promise.all(
-      rows.map(async (ticket) => {
-        try {
-          // Generates a base64 image URL
-          const qrCodeUrl = await QRCode.toDataURL(ticket.ticket_code);
-          return { ...ticket, qr_code_url: qrCodeUrl };
-        } catch (error) {
-          console.error("QR Generation Error:", error);
-          return { ...ticket, qr_code_url: null };
-        }
-      })
-    );
+      // Generate QR Codes
+      const myTickets = await Promise.all(rows.map(async (ticket) => {
+          try {
+              const qrCodeUrl = await QRCode.toDataURL(ticket.ticket_code);
+              return { ...ticket, qr_code_url: qrCodeUrl }; 
+          } catch (error) {
+              console.error("QR Generation Error:", error);
+              return { ...ticket, qr_code_url: null };
+          }
+      }));
 
-    res.render("user_tickets", { myTickets, user: req.session.user });
+      res.render("user_tickets", { myTickets, user: req.session.user });
   });
 });
 
@@ -512,6 +511,36 @@ app.delete("/api/events/delete/:id", isAuth, (req, res) => {
   });
 });
 
+// DELETE REGISTRATION (Student Cancellation of their registered event)
+app.post("/api/tickets/cancel", isAuth, (req, res) => {
+  const { ticket_code } = req.body;
+  const userId = req.session.user.id;
+
+  // Security Check: 
+  // 1. Must belong to the logged-in user
+  // 2. payment_status MUST be 'free'
+  const query = `DELETE FROM registrations 
+                 WHERE ticket_code = ? 
+                 AND user_id = ? 
+                 AND payment_status = 'free'`;
+
+  db.run(query, [ticket_code, userId], function(err) {
+      if (err) {
+          return res.status(500).json({ success: false, message: "Database error" });
+      }
+
+      if (this.changes === 0) {
+          // This happens if the ticket is paid, or doesn't belong to the user
+          return res.json({ 
+              success: false, 
+              message: "Cancellation denied. You can only cancel free registrations." 
+          });
+      }
+
+      res.json({ success: true, message: "Registration cancelled successfully." });
+  });
+});
+
 app.get("/events/edit/:id", isAuth, (req, res, next) => {
   const eventId = req.params.id;
   const userId = req.session.user.id;
@@ -534,60 +563,41 @@ app.get("/events/edit/:id", isAuth, (req, res, next) => {
 });
 
 app.post("/events/edit/:id", isAuth, (req, res, next) => {
-  const eventId = req.params.id;
-  const userId = req.session.user.id;
-  const {
-    title,
-    sub_title,
-    venue,
-    event_date,
-    duration,
-    description,
-    total_seats,
-    is_paid,
-    price,
-  } = req.body;
+    const eventId = req.params.id;
+    const userId = req.session.user.id;
+    const userRole = req.session.user.role; // Get role from session
 
-  const isPaidInt = is_paid === "on" ? 1 : 0;
-  const finalPrice = isPaidInt === 1 ? parseFloat(price) : 0.0;
+    const { title, sub_title, venue, event_date, duration, description, total_seats, is_paid, price } = req.body;
+    const isPaidInt = is_paid === "on" ? 1 : 0;
+    const finalPrice = isPaidInt === 1 ? parseFloat(price) : 0.0;
 
-  const query = `
-      UPDATE events SET 
-          title = ?, sub_title = ?, venue = ?, event_date = ?, 
-          duration = ?, description = ?, total_seats = ?, 
-          is_paid = ?, price = ?, event_status = 'pending_review',
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ? AND user_id = ?`;
+    // The Logic: 
+    // 1. Must be the owner (user_id = ?)
+    // 2. EITHER (User is Admin) OR (Registrations = 0)
+    const query = `
+        UPDATE events SET 
+            title = ?, sub_title = ?, venue = ?, event_date = ?, 
+            duration = ?, description = ?, total_seats = ?, 
+            is_paid = ?, price = ?, event_status = 'pending_review',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? 
+        AND user_id = ? 
+        AND (? = 'admin' OR (SELECT COUNT(*) FROM registrations WHERE event_id = ?) = 0)`;
 
-  db.run(
-    query,
-    [
-      title,
-      sub_title,
-      venue,
-      event_date,
-      duration,
-      description,
-      total_seats,
-      isPaidInt,
-      finalPrice,
-      eventId,
-      userId,
-    ],
-    function (err) {
-      if (err) {
-        console.error("Update Error:", err.message);
-        return next(err);
-      }
+    db.run(query, [
+        title, sub_title, venue, event_date, 
+        duration, description, total_seats, 
+        isPaidInt, finalPrice, 
+        eventId, userId, userRole, eventId
+    ], function (err) {
+        if (err) return next(err);
 
-      if (this.changes === 0) {
-        return res.status(403).send("Unauthorized: You do not own this event.");
-      }
+        if (this.changes === 0) {
+            return res.status(403).send("Access Denied: Registrations exist or unauthorized.");
+        }
 
-      // Redirect back to dashboard with a success message
-      res.redirect("/my-events?msg=update_success");
-    }
-  );
+        res.redirect("/my-events?msg=update_success");
+    });
 });
 
 // MOCK PAYMENT ROUTE

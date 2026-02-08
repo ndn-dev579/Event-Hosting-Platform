@@ -4,6 +4,29 @@
     <meta charset="UTF-8">
     <title>My Hosted Events | Evently</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Tooltip style */
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 140px;
+            background-color: black;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -70px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
 
@@ -18,6 +41,12 @@
     </nav>
 
     <div class="max-w-4xl mx-auto p-6 md:p-12">
+        <% if (typeof query !== 'undefined' && query.msg === 'update_success') { %>
+            <div class="bg-black text-white p-4 mb-6 font-bold uppercase text-xs tracking-widest border-l-8 border-yellow-400">
+                Event updated and sent for admin review!
+            </div>
+        <% } %>
+
         <div class="flex justify-between items-end mb-8">
             <h1 class="text-4xl font-black uppercase">My Events</h1>
             <a href="/events/create" class="bg-black text-white px-4 py-2 font-bold text-sm hover:bg-gray-800 transition">
@@ -31,7 +60,6 @@
             </div>
         <% } else { %>
             <div class="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
-
                 <table class="min-w-full leading-normal">
                     <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
@@ -40,12 +68,12 @@
                             <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Sales</th>
                             <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Gross Revenue</th>
                             <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                            <th class="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>                        </tr>
+                            <th class="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
                     </thead>
                     <tbody>
                         <% myEvents.forEach(event => { %>
                             <tr class="border-b border-gray-200 hover:bg-gray-50 transition">
-                                
                                 <td class="px-5 py-4 text-sm font-bold text-gray-900">
                                     <%= event.title %>
                                     <% if(event.is_paid) { %>
@@ -73,7 +101,6 @@
                                     <% if (event.is_paid) { %>
                                         <% const revenue = event.sold_count * event.price; %>
                                         <span class="text-green-600 font-bold">₹<%= revenue.toLocaleString('en-IN') %></span>
-                                        <div class="text-[10px] text-gray-400">Held by Admin</div>
                                     <% } else { %>
                                         <span class="text-gray-400 font-bold">Free</span>
                                     <% } %>
@@ -88,10 +115,18 @@
                                         <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-bold uppercase">Rejected</span>
                                     <% } %>
                                 </td>
+
                                 <td class="px-5 py-4 text-sm text-right space-x-3">
                                     <a href="/events/view/<%= event.id %>" class="text-blue-600 hover:text-blue-800 font-bold text-xs uppercase">View</a>
                                     
-                                    <a href="/events/edit/<%= event.id %>" class="text-gray-600 hover:text-black font-bold text-xs uppercase">Edit</a>
+                                    <% if (event.sold_count > 0 && user.role !== 'admin') { %>
+                                        <span class="tooltip inline-block text-gray-300 font-bold text-xs uppercase cursor-not-allowed relative">
+                                            🔒 Locked
+                                            <span class="tooltiptext text-[9px]">Registrations active. Contact Admin to edit.</span>
+                                        </span>
+                                    <% } else { %>
+                                        <a href="/events/edit/<%= event.id %>" class="text-gray-600 hover:text-black font-bold text-xs uppercase">Edit</a>
+                                    <% } %>
                                 
                                     <button onclick="confirmDelete(<%= event.id %>, '<%= event.title %>')" 
                                             class="text-red-500 hover:text-red-700 font-bold text-xs uppercase">
@@ -106,7 +141,6 @@
         <% } %>
     </div>
 
-
     <script>
         function confirmDelete(eventId, eventTitle) {
             if (confirm(`Are you sure you want to delete "${eventTitle}"? This cannot be undone.`)) {
@@ -116,7 +150,6 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Refresh the page to show the event is gone
                         window.location.reload();
                     } else {
                         alert("Error: " + data.message);
@@ -125,7 +158,6 @@
                 .catch(err => console.error("Delete failed:", err));
             }
         }
-        </script>
-
+    </script>
 </body>
 </html>
