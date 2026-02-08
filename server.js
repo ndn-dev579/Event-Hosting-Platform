@@ -542,62 +542,68 @@ app.post("/api/tickets/cancel", isAuth, (req, res) => {
 });
 
 app.get("/events/edit/:id", isAuth, (req, res, next) => {
-  const eventId = req.params.id;
-  const userId = req.session.user.id;
+    const eventId = req.params.id;
+    const userId = req.session.user.id;
+    const userRole = req.session.user.role;
 
-  // Security: Only allow the owner to edit
-  db.get(
-    "SELECT * FROM events WHERE id = ? AND user_id = ?",
-    [eventId, userId],
-    (err, event) => {
-      if (err) return next(err);
-      if (!event)
-        return res.status(403).send("Unauthorized or event not found.");
+    // Logic: Allow access if you are the OWNER OR an ADMIN
+    const query = `SELECT * FROM events WHERE id = ? AND (user_id = ? OR ? = 'admin')`;
 
-      // Fetch templates too so the user can change the poster style
-      db.all("SELECT * FROM poster_templates", [], (err, templates) => {
-        res.render("edit_event", { event, templates, user: req.session.user });
-      });
-    }
-  );
+    db.get(query, [eventId, userId, userRole], (err, event) => {
+        if (err) return next(err);
+        if (!event) return res.status(403).send("Unauthorized or event not found.");
+
+        db.all("SELECT * FROM poster_templates", [], (err, templates) => {
+            res.render("edit_event", { event, templates, user: req.session.user });
+        });
+    });
 });
 
 app.post("/events/edit/:id", isAuth, (req, res, next) => {
-    const eventId = req.params.id;
-    const userId = req.session.user.id;
-    const userRole = req.session.user.role; // Get role from session
+  const eventId = req.params.id;
+  const userId = req.session.user.id;
+  const userRole = req.session.user.role;
 
-    const { title, sub_title, venue, event_date, duration, description, total_seats, is_paid, price } = req.body;
-    const isPaidInt = is_paid === "on" ? 1 : 0;
-    const finalPrice = isPaidInt === 1 ? parseFloat(price) : 0.0;
+  const { 
+      title, sub_title, venue, event_date, duration, 
+      description, total_seats, is_paid, price, 
+      public_announcement, admin_note 
+  } = req.body;
 
-    // The Logic: 
-    // 1. Must be the owner (user_id = ?)
-    // 2. EITHER (User is Admin) OR (Registrations = 0)
-    const query = `
-        UPDATE events SET 
-            title = ?, sub_title = ?, venue = ?, event_date = ?, 
-            duration = ?, description = ?, total_seats = ?, 
-            is_paid = ?, price = ?, event_status = 'pending_review',
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ? 
-        AND user_id = ? 
-        AND (? = 'admin' OR (SELECT COUNT(*) FROM registrations WHERE event_id = ?) = 0)`;
+  const isPaidInt = is_paid === "on" ? 1 : 0;
+  const finalPrice = isPaidInt === 1 ? parseFloat(price) : 0.0;
 
-    db.run(query, [
-        title, sub_title, venue, event_date, 
-        duration, description, total_seats, 
-        isPaidInt, finalPrice, 
-        eventId, userId, userRole, eventId
-    ], function (err) {
-        if (err) return next(err);
+  // Logic: Update if (Owner OR Admin) AND (Admin bypass OR No Registrations)
+  const query = `
+      UPDATE events SET 
+          title = ?, sub_title = ?, venue = ?, event_date = ?, 
+          duration = ?, description = ?, total_seats = ?, 
+          is_paid = ?, price = ?, 
+          public_announcement = ?, admin_note = ?,
+          event_status = CASE WHEN ? = 'admin' THEN 'published' ELSE 'pending_review' END,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? 
+      AND (user_id = ? OR ? = 'admin') 
+      AND (? = 'admin' OR (SELECT COUNT(*) FROM registrations WHERE event_id = ?) = 0)`;
 
-        if (this.changes === 0) {
-            return res.status(403).send("Access Denied: Registrations exist or unauthorized.");
-        }
+  db.run(query, [
+      title, sub_title, venue, event_date, duration, description, 
+      total_seats, isPaidInt, finalPrice, 
+      public_announcement, admin_note,
+      userRole, // Used for the CASE status update
+      eventId, userId, userRole, userRole, eventId
+  ], function (err) {
+      if (err) {
+          console.error("Update Error:", err.message);
+          return next(err);
+      }
 
-        res.redirect("/my-events?msg=update_success");
-    });
+      if (this.changes === 0) {
+          return res.status(403).send("Access Denied: Registrations exist or you lack permission.");
+      }
+
+      res.redirect("/my-events?msg=update_success");
+  });
 });
 
 // MOCK PAYMENT ROUTE
