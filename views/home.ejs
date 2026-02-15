@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evently - Campus Events</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            background-image:
+                radial-gradient(#94a3b8 1px, transparent 1px),
+                radial-gradient(#94a3b8 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        /* --- Theme Components --- */
+        .thick-border {
+            border: 2px solid #0f172a;
+        }
+
+        .nav-btn {
+            background: #ffffff;
+            border: 2px solid #0f172a;
+            box-shadow: 3px 3px 0px #0f172a;
+            transition: all 0.1s;
+            font-weight: 700;
+        }
+
+        .nav-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0px #0f172a;
+        }
+
+        .nav-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px #0f172a;
+        }
+
+        .hero-badge {
+            background: #facc15;
+            /* Yellow-400 */
+            border: 2px solid #0f172a;
+            box-shadow: 3px 3px 0px #0f172a;
+        }
+
+        /* Event Card Styling */
+        .event-card {
+            background: #ffffff;
+            border: 2px solid #0f172a;
+            border-radius: 16px;
+            box-shadow: 5px 5px 0px #0f172a;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 7px 7px 0px #0f172a;
+        }
+
+        .card-tag {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 800;
+            padding: 4px 8px;
+            border: 2px solid #0f172a;
+            border-radius: 6px;
+            background: #f1f5f9;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border: 2px solid #0f172a;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #0f172a;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b-2 border-slate-900 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+
+                <!-- Logo -->
+                <a href="/" class="flex items-center gap-2 group">
+                    <div
+                        class="w-8 h-8 bg-blue-500 border-2 border-slate-900 rounded-lg flex items-center justify-center shadow-[2px_2px_0px_#0f172a] group-hover:rotate-12 transition-transform">
+                        <i class="fa-solid fa-bolt text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-extrabold text-slate-900 tracking-tight">Evently</span>
+                </a>
+
+                <!-- Desktop Links -->
+                <div class="hidden md:flex items-center gap-4">
+                    <a href="/events"
+                        class="text-sm font-bold text-slate-600 hover:text-slate-900 hover:underline decoration-2 underline-offset-4">Browse
+                        All</a>
+
+                    <% if (user) { %>
+
+                        <a href="/my-events"
+                            class="text-sm font-bold text-slate-600 hover:text-slate-900 hover:underline decoration-2 underline-offset-4">
+                            Hosted Events
+                        </a>
+
+                        <a href="/my-tickets"
+                            class="text-sm font-bold text-slate-600 hover:text-slate-900 hover:underline decoration-2 underline-offset-4">My
+                            Tickets</a>
+
+                        <% if (user.role==='admin' ) { %>
+                            <a href="/admin/dashboard"
+                                class="px-4 py-2 bg-purple-100 text-purple-700 border-2 border-slate-900 rounded-lg font-bold text-xs uppercase hover:bg-purple-200">Admin
+                                Panel</a>
+                            <% } %>
+
+                                <a href="/events/create"
+                                    class="nav-btn px-4 py-2 rounded-lg text-sm bg-yellow-400 text-slate-900">
+                                    <i class="fa-solid fa-plus mr-1"></i> Host Event
+                                </a>
+
+                                <a href="/logout"
+                                    class="text-sm font-bold text-red-600 hover:text-red-700 ml-2">Logout</a>
+                                <% } else { %>
+                                    <a href="/login"
+                                        class="text-sm font-bold text-slate-900 hover:underline decoration-2 underline-offset-4">Log
+                                        In</a>
+                                    <a href="/signup"
+                                        class="nav-btn px-5 py-2 rounded-lg text-sm bg-slate-900 text-white hover:text-white">Sign
+                                        Up</a>
+                                    <% } %>
+                </div>
+
+                <!-- Mobile Menu Button (Simple) -->
+                <div class="md:hidden">
+                    <% if (user) { %>
+                        <a href="/events/create"
+                            class="mr-2 text-xs font-bold bg-yellow-400 px-3 py-1.5 border-2 border-slate-900 rounded-md shadow-[2px_2px_0px_#0f172a]">+
+                            Host</a>
+                        <% } else { %>
+                            <a href="/login"
+                                class="text-xs font-bold bg-slate-900 text-white px-3 py-1.5 border-2 border-slate-900 rounded-md shadow-[2px_2px_0px_#94a3b8]">Login</a>
+                            <% } %>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Success Toast (Hidden by default) -->
+    <div id="toast"
+        class="hidden fixed top-20 right-5 z-50 bg-green-100 border-2 border-green-600 text-green-800 px-6 py-4 rounded-xl shadow-[4px_4px_0px_#166534] flex items-center gap-3 animate-bounce-in">
+        <i class="fa-solid fa-check-circle text-xl"></i>
+        <div>
+            <h4 class="font-bold text-sm uppercase">Success</h4>
+            <p class="text-xs font-medium" id="toast-message">Action completed.</p>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20 text-center">
+        <div class="inline-flex items-center gap-2 hero-badge px-4 py-1.5 rounded-full mb-6 rotate-[-2deg]">
+            <i class="fa-solid fa-star text-xs"></i>
+            <span class="text-xs font-extrabold uppercase tracking-widest text-slate-900">Campus Exclusive</span>
+        </div>
+
+        <h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-6 tracking-tight">
+            Discover what's happening<br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">on campus
+                today.</span>
+        </h1>
+
+        <p class="max-w-2xl mx-auto text-lg md:text-xl text-slate-600 font-medium mb-10 leading-relaxed">
+            From tech hackathons to cultural fests, Evently is your one-stop destination to register, host, and manage
+            student events.
+        </p>
+
+        <div class="flex flex-col sm:flex-row justify-center gap-4">
+            <a href="/events" class="nav-btn px-8 py-4 rounded-xl bg-slate-900 text-white text-lg">
+                Explore Events
+            </a>
+            <% if (!user) { %>
+                <a href="/signup" class="nav-btn px-8 py-4 rounded-xl bg-white text-slate-900 text-lg">
+                    Create Student ID
+                </a>
+                <% } %>
+        </div>
+    </header>
+
+    <!-- Featured Events Grid -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 w-full">
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 flex items-center gap-2">
+                <i class="fa-solid fa-fire text-orange-500"></i> Upcoming
+            </h2>
+            <a href="/events"
+                class="text-sm font-bold text-blue-600 hover:underline decoration-2 underline-offset-4 flex items-center">
+                View All <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
+            </a>
+        </div>
+
+        <% if (events.length===0) { %>
+            <!-- Empty State -->
+            <div class="text-center py-20 bg-white border-2 border-slate-900 rounded-2xl shadow-[5px_5px_0px_#0f172a]">
+                <div
+                    class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-slate-200">
+                    <i class="fa-regular fa-calendar-xmark text-3xl text-slate-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-900">No upcoming events</h3>
+                <p class="text-slate-500 mt-2">Check back later or host one yourself!</p>
+            </div>
+            <% } else { %>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <% for (const event of events) { %>
+                        <% const dateObj=new Date(event.event_date); const month=dateObj.toLocaleString('default', {
+                            month: 'short' }); const day=dateObj.getDate(); const time=dateObj.toLocaleTimeString([], {
+                            hour: '2-digit' , minute: '2-digit' }); const seatsLeft=event.total_seats -
+                            event.seats_taken; const percentFull=event.total_seats ? (event.seats_taken /
+                            event.total_seats) * 100 : 0; const isSoldOut=seatsLeft <=0; %>
+
+                            <div class="event-card group h-full">
+                                <!-- Card Header / Image Placeholder -->
+                                <!-- Using css_class as a color theme fallback if needed, or random gradients -->
+                                <div
+                                    class="h-32 bg-slate-100 border-b-2 border-slate-900 relative p-4 flex items-start justify-between overflow-hidden">
+                                    <!-- Background Pattern based on template -->
+
+
+
+                                    <!-- SOLID COLOR BACKGROUND -->
+                                    <div class="absolute inset-0 opacity-10 <%= event.css_class || 'bg-blue-500' %>">
+                                    </div>
+
+                                    <!-- STRIPE OVERLAY -->
+                                    <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(
+                                                45deg,
+                                                transparent,
+                                                transparent 10px,
+                                                #000 10px,
+                                                #000 11px
+                                            );">
+                                    </div>
+
+
+
+
+                                    <!-- Date Badge -->
+                                    <div
+                                        class="relative z-10 bg-white border-2 border-slate-900 rounded-lg p-2 text-center shadow-[3px_3px_0px_#0f172a] min-w-[60px]">
+                                        <span class="block text-xs font-bold text-slate-500 uppercase">
+                                            <%= month %>
+                                        </span>
+                                        <span class="block text-xl font-extrabold text-slate-900 leading-none">
+                                            <%= day %>
+                                        </span>
+                                    </div>
+
+                                    <% if (isSoldOut) { %>
+                                        <div
+                                            class="relative z-10 bg-red-500 text-white text-xs font-extrabold px-3 py-1 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] rotate-3">
+                                            SOLD OUT
+                                        </div>
+                                        <% } else if (seatsLeft < 10) { %>
+                                            <div
+                                                class="relative z-10 bg-orange-400 text-white text-xs font-extrabold px-3 py-1 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] -rotate-2">
+                                                FAST FILLING
+                                            </div>
+                                            <% } %>
+                                </div>
+
+                                <!-- Card Body -->
+                                <div class="p-5 flex flex-col flex-grow">
+                                    <div class="mb-4">
+                                        <h3
+                                            class="text-xl font-extrabold text-slate-900 leading-tight mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                                            <%= event.title %>
+                                        </h3>
+                                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            <i class="fa-solid fa-user-tag mr-1"></i>
+                                            <%= event.hosted_by %>
+                                        </p>
+                                    </div>
+
+                                    <div class="space-y-2 mb-6">
+                                        <div class="flex items-center text-sm font-semibold text-slate-700">
+                                            <div class="w-6 text-center mr-2"><i class="fa-regular fa-clock"></i>
+                                            </div>
+                                            <%= time %>
+                                        </div>
+                                        <div class="flex items-center text-sm font-semibold text-slate-700">
+                                            <div class="w-6 text-center mr-2"><i class="fa-solid fa-location-dot"></i>
+                                            </div>
+                                            <span class="line-clamp-1">
+                                                <%= event.venue %>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Seats Progress -->
+                                    <div class="mt-auto">
+                                        <div class="flex justify-between text-xs font-bold mb-1">
+                                            <span class="<%= isSoldOut ? 'text-red-600' : 'text-slate-500' %>">
+                                                <%= isSoldOut ? 'Full House' : `${seatsLeft} seats left` %>
+                                            </span>
+                                            <span class="text-slate-400">
+                                                <%= event.seats_taken %> / <%= event.total_seats %>
+                                            </span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill <%= isSoldOut ? 'bg-red-500' : 'bg-green-500' %>"
+                                                data-percent="<%= percentFull %>">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Card Footer -->
+                                <div class="p-4 border-t-2 border-slate-900 bg-slate-50">
+                                    <a href="/events/view/<%= event.id %>"
+                                        class="nav-btn block w-full py-2.5 rounded-lg text-center text-sm bg-white text-slate-900 hover:bg-slate-900 hover:text-white transition-colors">
+                                        <%= isSoldOut ? 'View Details' : 'Book Ticket' %>
+                                    </a>
+                                </div>
+                            </div>
+                            <% } %>
+                </div>
+                <% } %>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-8 border-t-4 border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="font-bold text-sm">
+                &copy; <%= new Date().getFullYear() %> Evently Campus. Built for students.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Client Logic for Messages -->
+    <script>
+        // Check for ?msg=... in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const msg = urlParams.get('msg');
+        const toast = document.getElementById('toast');
+        const toastText = document.getElementById('toast-message');
+
+        if (msg) {
+            toast.classList.remove('hidden');
+            if (msg === 'event_submitted_for_review') {
+                toastText.textContent = "Event submitted! Waiting for admin approval.";
+            } else if (msg === 'logged_in') {
+                toastText.textContent = "Successfully logged in.";
+            }
+
+            // Auto hide after 4 seconds
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 4000);
+        }
+
+
+
+        document.querySelectorAll('.progress-fill').forEach(el => {
+            const percent = el.dataset.percent;
+            el.style.width = percent + '%';
+        });
+
+    </script>
+</body>
+
+</html>

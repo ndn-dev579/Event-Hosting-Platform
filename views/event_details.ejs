@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= event.title %> | Evently</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col font-sans">
+
+    <nav class="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/" class="text-2xl font-black tracking-tighter hover:text-blue-600 transition">EVENTLY.</a>
+            
+            <div class="space-x-6 text-sm font-bold text-gray-600">
+                <a href="/" class="hover:text-black">Home</a>
+                <a href="/events" class="hover:text-black">All Events</a>
+                <% if (user) { %>
+                    <a href="/my-events" class="hover:text-black">Hosted Events</a>
+                    <a href="/my-tickets" class="hover:text-black">My Tickets</a>
+                    <a href="/logout" class="text-red-500 hover:text-red-700">Logout</a>
+                <% } else { %>
+                    <a href="/login" class="text-blue-600 hover:text-blue-800">Login</a>
+                <% } %>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full p-6 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-12">
+        
+        <div class="lg:col-span-5 flex flex-col items-center">
+            <div class="sticky top-24">
+                <div id="poster-render-target" 
+                     class="w-[400px] h-[565px] bg-gray-200 shadow-2xl border-[4px] border-black rounded-sm overflow-hidden mx-auto">
+                     <div class="h-full flex items-center justify-center text-gray-400 font-mono text-xs uppercase animate-pulse">
+                        Loading Design...
+                     </div>
+                </div>
+
+                <% if (event.event_status === 'pending_review') { %>
+                    <div class="mt-4 bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-4 py-3 rounded text-center font-bold text-sm">
+                        ⚠️ This event is waiting for Admin Approval.
+                    </div>
+                <% } %>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-8">
+            
+            <div>
+                <span class="inline-block bg-black text-white px-2 py-1 text-xs font-bold uppercase tracking-widest mb-3">
+                    Hosted By <%= event.hosted_by %>
+                </span>
+                <h1 class="text-5xl md:text-6xl font-black text-gray-900 uppercase leading-[0.9] tracking-tight mb-4 font-['Oswald']">
+                    <%= event.title %>
+                </h1>
+                <p class="text-xl md:text-2xl font-bold text-gray-500" style="color: <%= event.poster_color || '#6b7280' %>">
+                    <%= event.sub_title %>
+                </p>
+            </div>
+
+            <hr class="border-gray-200">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="flex items-start gap-4">
+                    <div class="bg-gray-100 p-3 rounded border border-gray-200">
+                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Date & Time</p>
+                        <p class="text-lg font-bold text-gray-900"><%= event.event_date.split('T')[0] %></p>
+                        <p class="text-sm text-gray-600"><%= event.duration %> Hours Duration</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4">
+                    <div class="bg-gray-100 p-3 rounded border border-gray-200">
+                        <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Venue</p>
+                        <p class="text-lg font-bold text-gray-900"><%= event.venue %></p>
+                        <p class="text-sm text-gray-600">On Campus</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="prose prose-lg text-gray-700 leading-relaxed">
+                <h3 class="font-bold text-black uppercase text-sm tracking-widest mb-2">About Event</h3>
+                <p><%= event.description %></p>
+            </div>
+
+            <div class="bg-white border-[3px] border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] mt-8">
+                
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Seats Remaining</p>
+                        <% let remaining = event.total_seats - event.seats_taken; %>
+                        <p class="text-3xl font-black text-black">
+                            <%= remaining %> <span class="text-lg text-gray-400 font-medium">/ <%= event.total_seats %></span>
+                        </p>
+                    </div>
+                    <% if (remaining < 5 && remaining > 0) { %>
+                        <span class="bg-red-100 text-red-600 px-3 py-1 text-xs font-bold uppercase animate-pulse border border-red-200">
+                            Almost Full!
+                        </span>
+                    <% } %>
+                </div>
+
+                <% if (!user) { %>
+                    <a href="/login" class="block w-full bg-gray-900 text-white text-center font-bold py-4 uppercase tracking-widest hover:bg-black transition">
+                        Login to Register
+                    </a>
+                
+                <% } else if (remaining <= 0) { %>
+                    <button disabled class="w-full bg-gray-100 text-gray-400 font-bold py-4 uppercase tracking-widest cursor-not-allowed border-2 border-gray-200">
+                        Event Sold Out
+                    </button>
+                
+                <% } else { %>
+                    
+                    <% if (event.is_paid == 1) { %>
+                        <button onclick="startPayment(<%= event.id %>)" 
+                                class="w-full bg-green-600 text-white font-bold py-4 text-lg uppercase tracking-widest hover:bg-green-700 transition shadow-lg transform active:scale-[0.99] flex justify-center items-center gap-2">
+                            <span>Pay ₹<%= event.price %> & Register</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        </button>
+                    <% } else { %>
+                        <form action="/events/register" method="POST">
+                            <input type="hidden" name="event_id" value="<%= event.id %>">
+                            <button type="submit" class="w-full bg-black text-white font-bold py-4 text-lg uppercase tracking-widest hover:bg-gray-800 transition shadow-lg transform active:scale-[0.99]">
+                                Register Now (Free)
+                            </button>
+                        </form>
+                    <% } %>
+                
+                <% } %>
+            </div>
+
+        </div>
+
+
+        <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-[100] backdrop-blur-sm">
+            <div class="bg-white p-8 w-full max-w-md shadow-2xl border-4 border-black relative transform transition-all scale-100">
+                
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-black uppercase tracking-tighter">Secure Checkout</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-red-600 font-bold text-xl">&times;</button>
+                </div>
+        
+                <div class="bg-gray-100 p-4 mb-6 border border-gray-200">
+                    <p class="text-xs font-bold text-gray-500 uppercase">Payment For</p>
+                    <p class="font-bold text-lg truncate"><%= event.title %></p>
+                    <div class="flex justify-between mt-2 pt-2 border-t border-gray-300">
+                        <span class="text-sm font-bold text-gray-600">Total Amount</span>
+                        <span class="text-xl font-black text-green-600">₹<%= event.price %></span>
+                    </div>
+                </div>
+        
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Card Number</label>
+                        <div class="relative">
+                            <input type="text" value="4242 4242 4242 4242" class="w-full border-2 border-gray-300 p-3 font-mono text-sm focus:border-black outline-none bg-gray-50" readonly>
+                            <svg class="w-6 h-6 absolute right-3 top-3 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-500 mb-1">Expiry</label>
+                            <input type="text" placeholder="MM/YY" class="w-full border-2 border-gray-300 p-3 font-mono text-sm focus:border-black outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-500 mb-1">CVV</label>
+                            <input type="password" placeholder="123" class="w-full border-2 border-gray-300 p-3 font-mono text-sm focus:border-black outline-none">
+                        </div>
+                    </div>
+                </div>
+        
+                <button onclick="processMockPayment()" id="payBtn" class="w-full mt-8 bg-black text-white py-4 font-bold uppercase tracking-widest hover:bg-gray-800 transition shadow-lg">
+                    Pay ₹<%= event.price %> Now
+                </button>
+                
+                <p class="text-center text-xs text-gray-400 mt-4 font-mono">
+                    <span class="text-green-500">🔒</span> 256-bit SSL Encrypted (Mock)
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/posterTemplates.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            // 1. Grab the server-side data (Passed from EJS to Client JS)
+            const eventData = {
+                title: "<%= event.title %>",
+                sub_title: "<%= event.sub_title %>",
+                hosted_by: "<%= event.hosted_by %>",
+                venue: "<%= event.venue %>",
+                date: "<%= event.event_date.split('T')[0] %>",
+                color: "<%= event.poster_color || '#ef4444' %>",
+                image: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30" // Placeholder until image upload is added
+            };
+
+            const templateKey = "<%= event.poster_template_id || 'modern' %>";
+            const container = document.getElementById('poster-render-target');
+
+            // 2. Use the shared library to draw the HTML
+            if (window.posterTemplates && window.posterTemplates[templateKey]) {
+                container.innerHTML = window.posterTemplates[templateKey](eventData);
+            } else {
+                // Fallback for old events or errors
+                container.innerHTML = window.posterTemplates['modern'](eventData);
+            }
+        });
+    </script>
+
+<script>
+    const modal = document.getElementById('paymentModal');
+    const payBtn = document.getElementById('payBtn');
+    const eventId = "<%= event.id %>"; // Store ID globally for this page
+
+    // 1. Open the Mock Modal
+    function startPayment(id) {
+        modal.classList.remove('hidden');
+    }
+
+    // 2. Close the Modal
+    function closeModal() {
+        modal.classList.add('hidden');
+    }
+
+    // 3. The Fake Payment Process
+    async function processMockPayment() {
+        // A. UI Loading State
+        payBtn.disabled = true;
+        payBtn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Processing...
+        `;
+
+        // B. Fake Delay (Make it feel real!)
+        await new Promise(r => setTimeout(r, 2000));
+
+        // C. Call the Server
+        try {
+            const response = await fetch('/events/mock-pay', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event_id: eventId })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Success UI
+                payBtn.classList.remove('bg-black', 'hover:bg-gray-800');
+                payBtn.classList.add('bg-green-600');
+                payBtn.innerHTML = "Payment Successful!";
+                
+                setTimeout(() => {
+                    window.location.href = "/my-tickets?msg=payment_success";
+                }, 1000);
+            } else {
+                alert("Error: " + data.message);
+                resetButton();
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Network Error");
+            resetButton();
+        }
+    }
+
+    function resetButton() {
+        payBtn.disabled = false;
+        payBtn.innerHTML = "Pay ₹<%= event.price %> Now";
+        payBtn.classList.add('bg-black');
+        payBtn.classList.remove('bg-green-600');
+    }
+</script>
+
+</body>
+</html>

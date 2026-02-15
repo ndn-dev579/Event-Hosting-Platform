@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Evently</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            background-image: 
+                radial-gradient(#94a3b8 1px, transparent 1px),
+                radial-gradient(#94a3b8 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        .thick-card {
+            background: #ffffff;
+            border: 2px solid #0f172a;
+            /* Shadow shifted to bottom-right for a 3D block feel */
+            box-shadow: 8px 8px 0px #0f172a; 
+            border-radius: 20px;
+            /* Subtle internal texture for attractiveness */
+            background-image: linear-gradient(#f1f5f9 1px, transparent 1px), linear-gradient(to right, #f1f5f9 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .thick-input {
+            width: 100%;
+            background: #ffffff;
+            border: 2px solid #cbd5e1;
+            border-bottom-width: 4px;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-weight: 600;
+            color: #0f172a;
+            transition: all 0.2s ease;
+            outline: none;
+            font-size: 1rem;
+        }
+        .thick-input:focus {
+            background: #fff;
+            border-color: #0f172a;
+            transform: translateY(-2px);
+        }
+
+        .thick-btn {
+            background-color: #0f172a;
+            color: white;
+            border: 2px solid #0f172a;
+            border-radius: 12px;
+            box-shadow: 4px 4px 0px #334155;
+            transition: all 0.1s;
+            font-size: 1.1rem;
+        }
+        .thick-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #334155;
+        }
+        .thick-btn:active {
+            transform: translate(1px, 1px);
+            box-shadow: 0px 0px 0px #334155;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Card: Increased width to max-w-md and padding to p-10 -->
+    <div class="thick-card w-full max-w-md p-10 relative overflow-hidden">
+        
+        <!-- Decorative Right Bar -->
+        <div class="absolute top-0 right-0 h-full w-3 bg-slate-900"></div>
+
+        <!-- Header Section -->
+        <div class="text-center mb-8 pr-3">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-yellow-400 border-2 border-slate-900 rounded-2xl shadow-[4px_4px_0px_#0f172a] mb-4 text-2xl transform -rotate-3 hover:rotate-0 transition-transform">
+                👋
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Welcome Back</h1>
+            <p class="text-slate-500 font-medium mt-2">Enter your details to access the portal.</p>
+        </div>
+
+        <!-- Error Alert -->
+        <div id="error-alert" class="hidden mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm mr-3">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-red-600 text-lg"></i>
+                <p class="text-sm font-bold text-red-800" id="error-message">Error info.</p>
+            </div>
+        </div>
+
+        <!-- Form Section -->
+        <form action="/auth/login" method="POST" class="space-y-6 pr-3">
+            
+            <!-- Email -->
+            <div>
+                <label class="block text-xs font-extrabold uppercase text-slate-500 mb-2 ml-1 tracking-wider">Email Address</label>
+                <div class="relative group">
+                    <input type="email" name="email" required placeholder="student@campus.edu" class="thick-input pl-10">
+                    <i class="fa-solid fa-envelope absolute left-3.5 top-4 text-slate-400 text-lg group-hover:text-slate-900 transition-colors"></i>
+                </div>
+            </div>
+
+            <!-- Password -->
+            <div>
+                <label class="block text-xs font-extrabold uppercase text-slate-500 mb-2 ml-1 tracking-wider">Password</label>
+                <div class="relative group">
+                    <input type="password" name="password" required placeholder="••••••••" class="thick-input pl-10">
+                    <i class="fa-solid fa-lock absolute left-3.5 top-4 text-slate-400 text-lg group-hover:text-slate-900 transition-colors"></i>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="thick-btn w-full py-3.5 font-bold tracking-wide mt-2">
+                Log In
+            </button>
+        </form>
+
+        <div class="mt-8 text-center pr-3">
+            <p class="text-slate-500 font-medium text-sm">
+                No account? 
+                <a href="/signup" class="text-slate-900 underline decoration-2 decoration-blue-500 underline-offset-4 hover:bg-blue-100 font-bold px-1 rounded transition-colors">Sign up for free</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const alertBox = document.getElementById('error-alert');
+        const errorMsg = document.getElementById('error-message');
+
+        if (error) {
+            alertBox.classList.remove('hidden');
+            if (error === 'access_expired') {
+                errorMsg.textContent = "Access Denied: Alumni/Passout.";
+            } else if (error === 'account_deactivated') {
+                errorMsg.textContent = "Account Deactivated.";
+            } else {
+                errorMsg.textContent = "Invalid credentials.";
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Event</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-6 min-h-screen">
+
+<div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+    
+    <div class="bg-white p-8 rounded-xl shadow-lg h-fit">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">Event Details</h2>
+        
+        <form action="/events/create" method="POST" class="space-y-4">
+            
+            <div>
+                <label class="block text-sm font-bold text-gray-700">Hosted By</label>
+                <input type="text" name="hosted_by" id="input-hostedby" placeholder="e.g. Computer Science Dept" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700">Event Title</label>
+                <input type="text" name="title" id="input-title" placeholder="e.g. Tech Symposium 2026" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required>
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700">Sub Title / Tagline</label>
+                <input type="text" name="sub_title" id="input-subtitle" placeholder="e.g. Innovating the Future" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Date</label>
+                    <input type="datetime-local" name="event_date" id="input-date" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Venue</label>
+                    <input type="text" name="venue" id="input-venue" placeholder="Main Hall" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Duration (Hours)</label>
+                    <input type="number" name="duration" placeholder="e.g. 4" class="w-full border border-gray-300 p-2 rounded" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700">Total Seats</label>
+                    <input type="number" name="total_seats" placeholder="e.g. 150" class="w-full border border-gray-300 p-2 rounded" required>
+                </div>
+            </div>
+
+
+            
+            <div class="bg-gray-50 p-4 rounded border border-gray-200">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" name="is_paid" id="isPaidToggle" class="w-5 h-5 text-black border-gray-300 rounded focus:ring-black">
+                    <span class="text-gray-900 font-bold uppercase text-xs tracking-wider">
+                        This is a Paid Event
+                    </span>
+                </label>
+
+                <div id="priceContainer" class="hidden mt-4 pl-8 border-l-2 border-gray-300">
+                    <label class="block text-gray-500 font-bold uppercase text-xs tracking-wider mb-1">
+                        Ticket Price (₹)
+                    </label>
+                    <input type="number" 
+                           name="price" 
+                           placeholder="e.g. 150" 
+                           min="1" 
+                           step="0.01"
+                           class="w-full md:w-1/2 border-2 border-gray-300 p-2 rounded font-mono focus:outline-none focus:border-black transition">
+                </div>
+            </div>
+
+            <script>
+                // Simple toggle logic for the price field
+                const toggle = document.getElementById('isPaidToggle');
+                const priceContainer = document.getElementById('priceContainer');
+                const priceInput = priceContainer.querySelector('input');
+
+                toggle.addEventListener('change', () => {
+                    if (toggle.checked) {
+                        priceContainer.classList.remove('hidden');
+                        priceInput.required = true;
+                    } else {
+                        priceContainer.classList.add('hidden');
+                        priceInput.required = false;
+                        priceInput.value = '';
+                    }
+                });
+            </script>
+
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700">Description</label>
+                <textarea name="description" rows="3" placeholder="Detailed description for the event page..." class="w-full border border-gray-300 p-2 rounded"></textarea>
+            </div>
+
+            <hr class="border-gray-200 my-4">
+            
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Poster Theme Color</label>
+                <input type="color" name="poster_color" id="input-color" value="#ef4444" class="w-full h-10 cursor-pointer rounded">
+            </div>
+
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-2">Select Template</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <% templates.forEach(function(temp) { %>
+                        <button type="button" 
+                                class="template-btn border p-2 text-xs font-bold uppercase rounded hover:bg-gray-50 transition text-center"
+                                data-key="<%= temp.template_key %>">
+                            <%= temp.template_name %>
+                        </button>
+                    <% }); %>
+                </div>
+            </div>
+
+            <input type="hidden" name="poster_template_id" id="selected-template-id" value="modern">
+
+            <button type="submit" class="w-full bg-black text-white font-bold py-4 mt-6 rounded-lg hover:bg-gray-800 transition shadow-lg">
+                CREATE EVENT
+            </button>
+        </form>
+    </div>
+
+    <div class="sticky top-10 flex items-start justify-center h-fit">
+        <div id="poster-preview-area" class="w-[400px] h-[565px] bg-gray-200 shadow-2xl rounded overflow-hidden">
+            </div>
+    </div>
+</div>
+
+<script src="/js/posterTemplates.js"></script>
+<script src="/js/posterBuilder.js"></script>
+
+</body>
+</html>

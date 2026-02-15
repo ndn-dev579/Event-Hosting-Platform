@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Review Queue</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <nav class="bg-black text-white p-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-tight">ADMIN DASHBOARD</h1>
+            <div class="space-x-6 text-sm font-bold">
+                <a href="/admin/dashboard" class="hover:text-gray-300">Menu</a>
+                <a href="/logout" class="text-red-400 hover:text-red-300">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-6xl mx-auto p-8">
+        <div class="flex justify-between items-end mb-8 border-b-4 border-black pb-4">
+            <div>
+                <h2 class="text-4xl font-black text-gray-900 uppercase">Pending Review</h2>
+                <p class="text-gray-600 mt-2 font-medium">
+                    You have <span class="text-blue-600 font-bold"><%= pendingEvents.length %></span> event(s) waiting for approval.
+                </p>
+            </div>
+            <a href="/admin/dashboard" class="bg-white border-2 border-black px-4 py-2 font-bold hover:bg-gray-50 text-sm">
+                ← Back to Menu
+            </a>
+        </div>
+
+        <% if (pendingEvents.length === 0) { %>
+            <div class="bg-white p-12 text-center border-2 border-dashed border-gray-300 rounded-lg">
+                <p class="text-gray-400 text-xl font-bold uppercase">All caught up!</p>
+                <p class="text-gray-500 mt-1">No pending events found.</p>
+            </div>
+        <% } else { %>
+            
+            <div class="grid grid-cols-1 gap-4">
+                <% pendingEvents.forEach(event => { %>
+                    <div class="bg-white border-2 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row justify-between items-center gap-6">
+                        
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="bg-yellow-300 text-xs font-bold px-2 py-1 border border-black uppercase tracking-wider">
+                                    Pending
+                                </span>
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Submitted by: <%= event.creator_name %>
+                                </span>
+                            </div>
+                            
+                            <h3 class="text-2xl font-black text-gray-900 uppercase leading-none">
+                                <%= event.title %>
+                            </h3>
+                            
+                            <div class="mt-2 text-sm font-medium text-gray-600 flex gap-4">
+                                <span class="flex items-center gap-1">
+                                    📅 <%= event.event_date %>
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    📍 <%= event.venue %>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <a href="/events/view/<%= event.id %>" target="_blank" 
+                               class="px-4 py-2 text-sm font-bold border-2 border-gray-300 text-gray-600 hover:border-black hover:text-black transition">
+                                👁️ Preview Page
+                            </a>
+                            <form action="/admin/event-action" method="POST" class="mt-4 flex flex-col gap-3" onsubmit="return validateAction(this)">
+                                <input type="hidden" name="event_id" value="<%= event.id %>">
+                                
+                                <textarea 
+                                    name="admin_note" 
+                                    id="note-<%= event.id %>"
+                                    placeholder="Reason for rejection (REQUIRED for rejection)..." 
+                                    class="w-full text-xs p-2 border-2 border-gray-100 rounded outline-none focus:border-red-500 bg-gray-50 font-medium"
+                                    rows="2"></textarea>
+                            
+                                <div class="flex gap-2">
+                                    <button type="submit" name="action" value="published" 
+                                            class="flex-1 px-6 py-2 text-sm font-bold bg-black text-white border-2 border-black hover:bg-gray-800 transition">
+                                        ✅ Publish
+                                    </button>
+                            
+                                    <button type="submit" name="action" value="rejected" 
+                                            class="flex-1 px-4 py-2 text-sm font-bold bg-white text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition">
+                                        Reject
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <script>
+                            function validateAction(form) {
+                                const action = document.activeElement.value; // Get which button was clicked
+                                const note = form.admin_note.value.trim();
+                            
+                                if (action === 'rejected' && note === '') {
+                                    alert("🚨 You must provide a reason for rejecting this event!");
+                                    form.admin_note.focus();
+                                    form.admin_note.classList.add('border-red-500');
+                                    return false; // Stop the form from submitting
+                                }
+                                return true; // Allow submission
+                            }
+                            </script>
+                        </div>
+
+                    </div>
+                <% }); %>
+            </div>
+
+        <% } %>
+    </div>
+
+</body>
+</html>
