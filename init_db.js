@@ -51,6 +51,7 @@ db.serialize(() => {
         description TEXT NOT NULL,
         venue TEXT NOT NULL,
         event_date DATETIME NOT NULL,
+        coordinators TEXT,
         total_seats INTEGER NOT NULL,
         is_paid BOOLEAN DEFAULT 0,
         price REAL DEFAULT 0.0,

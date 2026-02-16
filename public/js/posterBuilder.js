@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sub_title: 'Inspiring the Future', // Default text
         hosted_by: 'Evently Corp',         // Default text
         date: '2026-10-24',
+        time: '10:00 AM',
+        coordinators: '',
         venue: 'MAIN HALL',
         color: '#ef4444',
         image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'
@@ -14,10 +16,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const container = document.getElementById('poster-preview-area');
     const templateInput = document.getElementById('selected-template-id');
+    
 
     // 2. Render Function
     function renderPoster() {
         if (window.posterTemplates && window.posterTemplates[state.template]) {
+            // Logic to extract time for the template
+            if (state.date && state.date.includes('T')) {
+                const dateObj = new Date(state.date);
+                state.time = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            
             container.innerHTML = window.posterTemplates[state.template](state);
         }
     }
@@ -29,7 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'input-subtitle': 'sub_title',
         'input-hostedby': 'hosted_by',
         'input-venue': 'venue',
-        'input-date': 'date'
+        'input-date': 'date',
+        'input-coordinators': 'coordinators'
     };
 
     Object.keys(inputMap).forEach(id => {

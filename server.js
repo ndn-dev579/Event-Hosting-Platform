@@ -193,7 +193,8 @@ app.get("/events", (req, res, next) => {
 });
 
 // 4.1 Event Details Page
-app.get("/events/view/:id", (req, res, next) => {
+// 4.1 Event Details Page (Updated with QR Code Generation)
+app.get("/events/view/:id", isAuth, async (req, res, next) => {
   const eventId = req.params.id;
 
   // Join with templates and counts seats
@@ -206,23 +207,54 @@ app.get("/events/view/:id", (req, res, next) => {
       JOIN poster_templates t ON e.template_id = t.template_id
       WHERE e.id = ?`;
 
-  db.get(query, [eventId], (err, event) => {
-    if (err) return next(err);
-    if (!event) return res.status(404).send("Event not found.");
+  db.get(query, [eventId], async (err, event) => {
+      if (err) return next(err);
+      if (!event) return res.status(404).send("Event not found.");
 
-    // Human-in-the-Loop Security:
-    // Only Admins or the Creator can see 'pending' or 'rejected' events.
-    const canView =
-      event.event_status === "published" ||
-      (req.session.user &&
-        (req.session.user.role === "admin" ||
-          req.session.user.id === event.user_id));
+      // Human-in-the-Loop Security
+      const canView =
+          event.event_status === "published" ||
+          (req.session.user &&
+              (req.session.user.role === "admin" ||
+                  req.session.user.id === event.user_id));
 
-    if (!canView) {
-      return res.status(403).send("This event is currently under review.");
-    }
+      if (!canView) {
+          return res.status(403).send("This event is currently under review.");
+      }
 
-    res.render("event_details", { event, user: req.session.user });
+      try {
+          // --- NEW: QR CODE GENERATION ---
+          // Construct the URL that leads back to this specific page
+          const protocol = req.protocol;
+          const host = req.get('host');
+          const eventUrl = `${protocol}://${host}/events/view/${eventId}`;
+
+          // Generate the QR code as a Base64 string
+          const qrCodeDataUrl = await QRCode.toDataURL(eventUrl, {
+              margin: 1,
+              width: 200,
+              color: {
+                  dark: '#000000', // Black modules
+                  light: '#ffffff' // White background
+              }
+          });
+
+          // Pass both 'event' and 'qrCodeDataUrl' to the EJS template
+          res.render("event_details", { 
+              event, 
+              qrCodeDataUrl, 
+              user: req.session.user 
+          });
+
+      } catch (qrError) {
+          console.error("QR Generation Failed:", qrError);
+          // Fallback: still render the page even if QR generation fails
+          res.render("event_details", { 
+              event, 
+              qrCodeDataUrl: null, 
+              user: req.session.user 
+          });
+      }
   });
 });
 
@@ -391,6 +423,7 @@ app.post("/events/create", isAuth, (req, res, next) => {
     // NEW FIELDS
     is_paid, // will be "on" if checked, or undefined
     price, // will be a number or empty
+    coordinators,
   } = req.body;
 
   // Convert Checkbox "on" to Boolean 1 or 0
@@ -412,8 +445,8 @@ app.post("/events/create", isAuth, (req, res, next) => {
         INSERT INTO events (
                 user_id, hosted_by, template_id, poster_template_id, poster_color, 
                 title, sub_title, duration, description, venue, event_date, total_seats,
-                is_paid, price
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                is_paid, price, coordinators
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
         `;
 
       db.run(
@@ -433,6 +466,7 @@ app.post("/events/create", isAuth, (req, res, next) => {
           total_seats,
           isPaidInt,
           finalPrice,
+          coordinators,
         ],
         (err) => {
           if (err) {
@@ -570,31 +604,33 @@ app.post("/events/edit/:id", isAuth, (req, res, next) => {
   const { 
       title, sub_title, venue, event_date, duration, 
       description, total_seats, is_paid, price, 
-      public_announcement, admin_note 
+      public_announcement, admin_note, coordinators // coordinators extracted here
   } = req.body;
 
   const isPaidInt = is_paid === "on" ? 1 : 0;
   const finalPrice = isPaidInt === 1 ? parseFloat(price) : 0.0;
 
-  // Logic: Update if (Owner OR Admin) AND (Admin bypass OR No Registrations)
   const query = `
       UPDATE events SET 
           title = ?, sub_title = ?, venue = ?, event_date = ?, 
           duration = ?, description = ?, total_seats = ?, 
           is_paid = ?, price = ?, 
           public_announcement = ?, admin_note = ?,
-          event_status = CASE WHEN ? = 'admin' THEN 'published' ELSE 'pending_review' END,
+          coordinators = ?, -- 12th parameter
+          event_status = CASE WHEN ? = 'admin' THEN 'published' ELSE 'pending_review' END, -- 13th parameter
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ? 
       AND (user_id = ? OR ? = 'admin') 
       AND (? = 'admin' OR (SELECT COUNT(*) FROM registrations WHERE event_id = ?) = 0)`;
 
   db.run(query, [
-      title, sub_title, venue, event_date, duration, description, 
-      total_seats, isPaidInt, finalPrice, 
+      title, sub_title, venue, event_date, 
+      duration, description, total_seats, 
+      isPaidInt, finalPrice, 
       public_announcement, admin_note,
-      userRole, // Used for the CASE status update
-      eventId, userId, userRole, userRole, eventId
+      coordinators, // Added here to match the 12th '?' in SET
+      userRole,     // Matches the '?' in CASE
+      eventId, userId, userRole, userRole, eventId // Matches the WHERE clause
   ], function (err) {
       if (err) {
           console.error("Update Error:", err.message);
@@ -669,3 +705,4 @@ app.listen(PORT, () => {
 //#003049 dark blue
 //#669bbc light blue
 //#fdf0d5 cream
+

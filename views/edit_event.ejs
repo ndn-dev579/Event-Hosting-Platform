@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Event | Evently</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
 
     <nav class="bg-white border-b border-gray-200 py-4 px-6 sticky top-0 z-50">
-        <div class="max-w-4xl mx-auto flex justify-between items-center">
+        <div class="max-w-[1400px] mx-auto flex justify-between items-center">
             <a href="/" class="text-2xl font-black tracking-tighter">EVENTLY.</a>
             <div class="space-x-6 text-sm font-bold text-gray-600">
                 <a href="/my-events" class="hover:text-black">&larr; Back to Dashboard</a>
@@ -17,146 +19,241 @@
         </div>
     </nav>
 
-    <main class="max-w-4xl mx-auto p-6 md:p-12">
-        <header class="mb-10">
-            <h1 class="text-5xl font-black uppercase tracking-tighter italic">
-                <%= user.role === 'admin' ? 'Super Edit' : 'Edit Event' %>
-            </h1>
-            <p class="text-gray-500 mt-2 font-medium">
-                <% if (user.role === 'admin') { %>
-                    You are overriding this event as an <span class="text-red-600 font-bold uppercase underline">Administrator</span>.
-                <% } else { %>
-                    Updating this event will set its status back to <span class="text-yellow-600">Pending Review</span>.
-                <% } %>
-            </p>
-        </header>
+    <main class="max-w-[1400px] mx-auto p-6 md:p-12 flex flex-col lg:flex-row gap-12">
+        
+        <div class="flex-1 max-w-4xl">
+            <header class="mb-10">
+                <h1 class="text-5xl font-black uppercase tracking-tighter italic">
+                    <%= user.role === 'admin' ? 'Super Edit' : 'Edit Event' %>
+                </h1>
+                <p class="text-gray-500 mt-2 font-medium">
+                    <% if (user.role === 'admin') { %>
+                        You are overriding this event as an <span class="text-red-600 font-bold uppercase underline">Administrator</span>.
+                    <% } else { %>
+                        Updating this event will set its status back to <span class="text-yellow-600">Pending Review</span>.
+                    <% } %>
+                </p>
+            </header>
 
-        <% if (event.event_status === 'rejected' && event.admin_note) { %>
-            <div class="bg-red-600 text-white p-6 mb-8 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <h3 class="font-black uppercase text-xs mb-2 tracking-widest flex items-center">
-                    <span class="mr-2 text-lg">⚠️</span> Correction Required from Admin
-                </h3>
-                <p class="font-bold text-lg leading-tight italic">"<%= event.admin_note %>"</p>
-            </div>
-        <% } %>
-
-        <form action="/events/edit/<%= event.id %>" method="POST" class="space-y-8">
-            
-            <% if (user.role === 'admin') { %>
-                <div class="bg-yellow-400 border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-pulse">
-                    <h2 class="text-xl font-black uppercase mb-4 flex items-center">
-                        <span class="mr-2">📢</span> Public Announcement
-                    </h2>
-                    <textarea name="public_announcement" rows="2" 
-                              placeholder="e.g. VENUE CHANGED TO AUDITORIUM A DUE TO RAIN!"
-                              class="w-full border-2 border-black p-4 text-lg font-bold uppercase outline-none focus:ring-4 focus:ring-white transition-all"><%= event.public_announcement %></textarea>
-                    <p class="text-[10px] font-bold uppercase mt-2 text-yellow-900 leading-tight italic">
-                        * This message appears on the event page and all student tickets.
-                    </p>
-
-                    <div class="mt-8 pt-6 border-t-2 border-yellow-600">
-                        <h2 class="text-lg font-black uppercase mb-2 flex items-center">
-                            <span class="mr-2">📝</span> Admin Note (To Host)
-                        </h2>
-                        <textarea name="admin_note" rows="1" 
-                                  placeholder="Private feedback for the event host..."
-                                  class="w-full border-2 border-black p-3 text-sm font-bold outline-none"><%= event.admin_note %></textarea>
-                    </div>
+            <% if (event.event_status === 'rejected' && event.admin_note) { %>
+                <div class="bg-red-600 text-white p-6 mb-8 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <h3 class="font-black uppercase text-xs mb-2 tracking-widest flex items-center">
+                        <span class="mr-2 text-lg">⚠️</span> Correction Required from Admin
+                    </h3>
+                    <p class="font-bold text-lg leading-tight italic">"<%= event.admin_note %>"</p>
                 </div>
             <% } %>
 
-            <div class="bg-white border-2 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                <h2 class="text-xl font-black uppercase mb-6 border-b-2 border-black pb-2">1. Basic Information</h2>
+            <form action="/events/edit/<%= event.id %>" method="POST" class="space-y-8">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="flex flex-col">
-                        <label class="text-xs font-bold uppercase mb-1">Event Title</label>
-                        <input type="text" name="title" value="<%= event.title %>" required 
-                               class="border-2 border-black p-3 focus:bg-yellow-50 outline-none font-bold">
+                <% if (user.role === 'admin') { %>
+                    <div class="bg-yellow-400 border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] animate-pulse">
+                        <h2 class="text-xl font-black uppercase mb-4 flex items-center">
+                            <span class="mr-2">📢</span> Public Announcement
+                        </h2>
+                        <textarea name="public_announcement" rows="2" 
+                                  placeholder="e.g. VENUE CHANGED TO AUDITORIUM A DUE TO RAIN!"
+                                  class="w-full border-2 border-black p-4 text-lg font-bold uppercase outline-none focus:ring-4 focus:ring-white transition-all"><%= event.public_announcement %></textarea>
+
+                        <div class="mt-8 pt-6 border-t-2 border-yellow-600">
+                            <h2 class="text-lg font-black uppercase mb-2 flex items-center">
+                                <span class="mr-2">📝</span> Admin Note (To Host)
+                            </h2>
+                            <textarea name="admin_note" rows="1" 
+                                      placeholder="Private feedback for the event host..."
+                                      class="w-full border-2 border-black p-3 text-sm font-bold outline-none"><%= event.admin_note %></textarea>
+                        </div>
+                    </div>
+                <% } %>
+
+                <div class="bg-white border-2 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                    <h2 class="text-xl font-black uppercase mb-6 border-b-2 border-black pb-2">1. Basic Information</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold uppercase mb-1">Event Title</label>
+                            <input type="text" name="title" id="input-title" value="<%= event.title %>" required 
+                                   class="border-2 border-black p-3 focus:bg-yellow-50 outline-none font-bold">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold uppercase mb-1">Sub-Title / Catchphrase</label>
+                            <input type="text" name="sub_title" id="input-subtitle" value="<%= event.sub_title %>"
+                                   class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold uppercase mb-1">Venue</label>
+                            <input type="text" name="venue" id="input-venue" value="<%= event.venue %>" required
+                                   class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold uppercase mb-1">Event Date & Time</label>
+                            <input type="datetime-local" name="event_date" id="input-date"
+                                   value="<%= event.event_date ? event.event_date.replace(' ', 'T').substring(0, 16) : '' %>" 
+                                   required class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
+                        </div>
                     </div>
 
-                    <div class="flex flex-col">
-                        <label class="text-xs font-bold uppercase mb-1">Sub-Title / Catchphrase</label>
-                        <input type="text" name="sub_title" value="<%= event.sub_title %>"
-                               class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
-                    </div>
-
-                    <div class="flex flex-col">
-                        <label class="text-xs font-bold uppercase mb-1">Venue</label>
-                        <input type="text" name="venue" value="<%= event.venue %>" required
-                               class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
-                    </div>
-
-                    <div class="flex flex-col">
-                        <label class="text-xs font-bold uppercase mb-1">Event Date & Time</label>
-                        <input type="datetime-local" name="event_date" 
-       value="<%= event.event_date ? event.event_date.replace(' ', 'T').substring(0, 16) : '' %>" 
-       required class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
+                    <div class="flex flex-col mt-6">
+                        <label class="text-xs font-bold uppercase mb-1">Description</label>
+                        <textarea name="description" rows="4" required
+                                  class="border-2 border-black p-3 focus:bg-yellow-50 outline-none"><%= event.description %></textarea>
                     </div>
                 </div>
 
-                <div class="flex flex-col mt-6">
-                    <label class="text-xs font-bold uppercase mb-1">Description</label>
-                    <textarea name="description" rows="4" required
-                              class="border-2 border-black p-3 focus:bg-yellow-50 outline-none"><%= event.description %></textarea>
+                <div class="bg-white border-2 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                    <h2 class="text-xl font-black uppercase mb-6 border-b-2 border-black pb-2">2. Staffing & Poster Style</h2>
+                    <div class="flex flex-col mb-6">
+                        <label class="text-xs font-bold uppercase mb-1">Event Coordinators</label>
+                        <input type="text" name="coordinators" id="input-coordinators" value="<%= event.coordinators %>" 
+                               placeholder="Rahul, Sneha, Amit" class="border-2 border-black p-3 font-bold focus:bg-yellow-50 outline-none">
+                    </div>
+                    <div class="flex flex-col">
+                        <label class="text-xs font-bold uppercase mb-1">Poster Background Color</label>
+                        <input type="color" name="poster_color" id="input-color" value="<%= event.poster_color || '#ef4444' %>" 
+                               class="w-full h-12 cursor-pointer border-2 border-black">
+                    </div>
+                    <input type="hidden" name="poster_template_id" id="selected-template-id" value="<%= event.poster_template_id %>">
                 </div>
+
+                <div class="bg-white border-2 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                    <h2 class="text-xl font-black uppercase mb-6 border-b-2 border-black pb-2">3. Logistics & Pricing</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold uppercase mb-1">Duration (Mins)</label>
+                            <input type="number" name="duration" value="<%= event.duration %>" required
+                                   class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold uppercase mb-1">Total Seats</label>
+                            <input type="number" name="total_seats" value="<%= event.total_seats %>" required
+                                   class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label class="text-xs font-bold uppercase mb-1">Price (₹)</label>
+                            <input type="number" step="0.01" name="price" value="<%= event.price %>"
+                                   class="border-2 border-black p-3 focus:bg-yellow-50 outline-none font-mono">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center space-x-3">
+                        <input type="checkbox" name="is_paid" id="is_paid" 
+                               class="w-5 h-5 accent-black" <%= event.is_paid ? 'checked' : '' %>>
+                        <label for="is_paid" class="text-sm font-black uppercase cursor-pointer">This is a Paid Event</label>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center gap-4">
+                    <button type="submit" 
+                            class="w-full md:w-auto bg-black text-white text-xl font-black uppercase px-12 py-4 hover:bg-yellow-400 hover:text-black transition-colors shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)]">
+                        <%= user.role === 'admin' ? 'Update & Broadcast' : 'Update & Resubmit Event' %>
+                    </button>
+                    
+                    <button type="button" id="downloadBtn" onclick="downloadPoster()" 
+                            class="text-sm font-black uppercase underline hover:text-red-600 transition-colors flex items-center gap-2">
+                        <span id="btnText">Download Updated Poster</span>
+                        <div id="btnSpinner" class="hidden animate-spin h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="lg:w-[450px]">
+            <div class="sticky top-32 flex flex-col items-center">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] mb-4 text-gray-400">Live Poster Preview</p>
+                <div id="poster-preview-area" class="w-[400px] h-[565px] bg-white shadow-2xl border-4 border-black overflow-hidden">
+                    </div>
             </div>
-
-            <div class="bg-white border-2 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                <h2 class="text-xl font-black uppercase mb-6 border-b-2 border-black pb-2">2. Logistics & Pricing</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="flex flex-col">
-                        <label class="text-xs font-bold uppercase mb-1">Duration (Mins)</label>
-                        <input type="number" name="duration" value="<%= event.duration %>" required
-                               class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
-                    </div>
-
-                    <div class="flex flex-col">
-                        <label class="text-xs font-bold uppercase mb-1">Total Seats</label>
-                        <input type="number" name="total_seats" value="<%= event.total_seats %>" required
-                               class="border-2 border-black p-3 focus:bg-yellow-50 outline-none">
-                    </div>
-
-                    <div class="flex flex-col">
-                        <label class="text-xs font-bold uppercase mb-1">Price (₹)</label>
-                        <input type="number" step="0.01" name="price" value="<%= event.price %>"
-                               class="border-2 border-black p-3 focus:bg-yellow-50 outline-none font-mono">
-                    </div>
-                </div>
-
-                <div class="mt-6 flex items-center space-x-3">
-                    <input type="checkbox" name="is_paid" id="is_paid" 
-                           class="w-5 h-5 accent-black" <%= event.is_paid ? 'checked' : '' %>>
-                    <label for="is_paid" class="text-sm font-black uppercase cursor-pointer">This is a Paid Event</label>
-                </div>
-            </div>
-
-            <div class="flex flex-col items-center">
-                <button type="submit" 
-                        class="w-full md:w-auto bg-black text-white text-xl font-black uppercase px-12 py-4 hover:bg-yellow-400 hover:text-black transition-colors shadow-[8px_8px_0px_0px_rgba(0,0,0,0.3)] hover:shadow-none active:translate-x-1 active:translate-y-1">
-                    <%= user.role === 'admin' ? 'Update & Broadcast' : 'Update & Resubmit Event' %>
-                </button>
-                <p class="text-[10px] text-gray-400 mt-4 uppercase tracking-widest text-center">
-                    Original Submission: <%= event.created_at %>
-                </p>
-            </div>
-
-        </form>
+        </div>
     </main>
 
+    <script src="/js/posterTemplates.js"></script>
+    <script src="/js/posterBuilder.js"></script>
     <script>
-        const isPaidCheckbox = document.getElementById('is_paid');
-        const priceInput = document.querySelector('input[name="price"]');
+        // 1. INITIALIZE DATA ON LOAD
+       // Add this at the beginning of your script block in edit_event.ejs
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Manually pull the EJS-filled values into the poster state object
+    state.title = document.querySelector('input[name="title"]').value;
+    state.sub_title = document.querySelector('input[name="sub_title"]').value;
+    state.venue = document.querySelector('input[name="venue"]').value;
+    state.date = document.querySelector('input[name="event_date"]').value;
+    state.coordinators = document.getElementById('input-coordinators').value;
+    state.color = document.getElementById('input-color').value;
+    state.template = document.getElementById('selected-template-id').value;
+    
+    // We assume the image is also part of the event data
+    // If you have an image field, add: state.image = "<%= event.image_url %>";
 
-        isPaidCheckbox.addEventListener('change', () => {
-            if(!isPaidCheckbox.checked) {
-                priceInput.value = 0;
-                priceInput.classList.add('bg-gray-100');
-            } else {
-                priceInput.classList.remove('bg-gray-100');
+    // 2. Trigger the initial render so the poster shows THIS event's details
+    if (typeof renderPoster === 'function') {
+        renderPoster();
+    }
+});
+    
+        // 2. HIGH-RES DOWNLOAD LOGIC WITH CSS FIX
+        async function downloadPoster() {
+    const btn = document.getElementById('downloadBtn');
+    const text = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+    const poster = document.getElementById('poster-preview-area');
+
+    // Show loading state
+    btn.disabled = true;
+    text.innerText = "Capturing Design...";
+    spinner.classList.remove('hidden');
+
+    // Ensure the poster is rendered with the latest state
+    if (typeof renderPoster === 'function') renderPoster();
+
+    // Use a moderate delay (500ms is enough if the CSS is actually accessible)
+    setTimeout(() => {
+        html2canvas(poster, {
+            scale: 3, 
+            useCORS: true,        // Critical for loading external fonts/images
+            allowTaint: true,
+            logging: false,
+            backgroundColor: null, 
+            scrollX: -window.scrollX, // Fixes offset issues if page is scrolled
+            scrollY: -window.scrollY,
+            // THE FIX: Manual CSS Injection
+            onclone: (clonedDoc) => {
+                // 1. Ensure Tailwind is in the head of the clone
+                const tailwind = document.querySelector('script[src*="tailwind"]');
+                if (tailwind) {
+                    const script = clonedDoc.createElement('script');
+                    script.src = tailwind.src;
+                    clonedDoc.head.appendChild(script);
+                }
+
+                // 2. Force the element to be visible and have correct dimensions
+                const clonedPoster = clonedDoc.getElementById('poster-preview-area');
+                clonedPoster.style.display = 'block';
+                clonedPoster.style.transform = 'none'; // Remove any CSS transforms that break capture
             }
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `Evently-Poster-${Date.now()}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+
+            // Reset UI
+            btn.disabled = false;
+            text.innerText = "Download Updated Poster";
+            spinner.classList.add('hidden');
+        }).catch(err => {
+            console.error("Capture Failed:", err);
+            btn.disabled = false;
+            text.innerText = "Capture Error";
+            spinner.classList.add('hidden');
         });
+    }, 500); 
+}
     </script>
 </body>
 </html>
