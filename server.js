@@ -144,9 +144,10 @@ app.get("/logout", (req, res) => {
 app.get("/", (req, res, next) => {
   // Logic: Join with registrations to count taken seats per event
   const query = `SELECT 
-                      e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
-                      t.css_class,
-                      (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as seats_taken
+                    e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
+                    e.poster_color,
+                    t.css_class,
+                    (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as seats_taken
                   FROM events e
                   JOIN poster_templates t ON e.template_id = t.template_id
                   WHERE e.event_status = 'published' 
@@ -166,7 +167,7 @@ app.get("/events", (req, res, next) => {
 
   const query = `
       SELECT 
-          e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,
+          e.id, e.title, e.venue, e.event_date, e.hosted_by, e.total_seats,e.poster_color,
           t.css_class,
           (SELECT COUNT(*) FROM registrations r WHERE r.event_id = e.id) as seats_taken
       FROM events e

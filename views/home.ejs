@@ -241,29 +241,16 @@
                                 <!-- Card Header / Image Placeholder -->
                                 <!-- Using css_class as a color theme fallback if needed, or random gradients -->
                                 <div
-                                    class="h-32 bg-slate-100 border-b-2 border-slate-900 relative p-4 flex items-start justify-between overflow-hidden">
-                                    <!-- Background Pattern based on template -->
+                                    class="h-32 relative p-4 flex items-start justify-between overflow-hidden border-b-2 border-slate-900 bg-white">
 
-
-
-                                    <!-- SOLID COLOR BACKGROUND -->
-                                    <div class="absolute inset-0 opacity-10 <%= event.css_class || 'bg-blue-500' %>">
+                                    <div class="absolute inset-0 opacity-[0.5]"
+                                        style="background-color: <%= event.poster_color || '#3b82f6' %> !important;">
                                     </div>
 
-                                    <!-- STRIPE OVERLAY -->
-                                    <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(
-                                                45deg,
-                                                transparent,
-                                                transparent 10px,
-                                                #000 10px,
-                                                #000 11px
-                                            );">
+                                    <div class="absolute inset-0 opacity-10 pointer-events-none"
+                                        style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 10px 10px;">
                                     </div>
 
-
-
-
-                                    <!-- Date Badge -->
                                     <div
                                         class="relative z-10 bg-white border-2 border-slate-900 rounded-lg p-2 text-center shadow-[3px_3px_0px_#0f172a] min-w-[60px]">
                                         <span class="block text-xs font-bold text-slate-500 uppercase">
@@ -274,17 +261,14 @@
                                         </span>
                                     </div>
 
-                                    <% if (isSoldOut) { %>
-                                        <div
-                                            class="relative z-10 bg-red-500 text-white text-xs font-extrabold px-3 py-1 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] rotate-3">
-                                            SOLD OUT
-                                        </div>
-                                        <% } else if (seatsLeft < 10) { %>
+                                    <div class="relative z-10">
+                                        <% if (isSoldOut) { %>
                                             <div
-                                                class="relative z-10 bg-orange-400 text-white text-xs font-extrabold px-3 py-1 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] -rotate-2">
-                                                FAST FILLING
+                                                class="bg-red-500 text-white text-xs font-extrabold px-3 py-1 rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#000] rotate-3 uppercase">
+                                                SOLD OUT
                                             </div>
                                             <% } %>
+                                    </div>
                                 </div>
 
                                 <!-- Card Body -->

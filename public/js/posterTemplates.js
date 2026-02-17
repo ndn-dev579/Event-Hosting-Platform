@@ -173,7 +173,7 @@ const templates = {
             
             <div class="grid grid-cols-2 gap-2 font-mono mb-2">
                 <div class="bg-black text-white p-3 border-[4px] border-black flex flex-col justify-center">
-                     <span class="text-[10px] uppercase tracking-widest text-gray-300 mb-1">>> LOCATION</span>
+                     <span class="text-[10px] uppercase tracking-widest text-gray-300 mb-1">>> VENUE</span>
                      <p class="text-base font-bold uppercase leading-tight">${
                        data.venue
                      }</p>
